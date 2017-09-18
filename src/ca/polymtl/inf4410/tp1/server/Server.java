@@ -47,6 +47,6 @@ public class Server implements ServerInterface {
 	 */
 	@Override
 	public void execute(byte[] bytes) throws RemoteException {
-		System.out.println("Data received. Array of length " + String.valueOf(bytes.length) + " bytes received");
+		//System.out.println("Data received. Array of length " + String.valueOf(bytes.length) + " bytes received");
 	}
 }
