@@ -25,9 +25,21 @@ public interface FileServerInterface extends Remote {
 	 */
 	boolean create(String fileName) throws IOException, RemoteException;
 	
-	
+	/**
+	 * Get all the existing file names in the server and which files are currently locked by who. The identifier of the person
+	 * who locked the file is not transmitted. It is only a number that represent the client that is sent.
+	 * @return All the file names with the people who locked those files.
+	 * @throws IOException Exception thrown if an error occur during reading the files on the disk.
+	 * @throws RemoteException Exception thrown if an error with the connection occur.
+	 */
 	FileLockedInfo[] list() throws IOException, RemoteException;
 	
+	/**
+	 * Retrieve the content of all the files.
+	 * @return The file names and all their content.
+	 * @throws IOException Exception thrown if an error occur during reading the files on the disk.
+	 * @throws RemoteException Exception thrown if an error with the connection occur.
+	 */
 	FileContent[] syncLocalDir() throws IOException, RemoteException;
 	
 	/**

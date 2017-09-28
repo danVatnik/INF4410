@@ -2,36 +2,29 @@ package shared;
 
 import java.io.UnsupportedEncodingException;
 
+/**
+ * Class to transfer the content of a file beetween the client and the server.
+ * @author Dominik Courcelles, Dan Vatnik
+ *
+ */
 public class FileContent extends FileCommonInfo {
 	private byte[] fileContent;
 	
+	/**
+	 * Create a FileContent to store the content of a file to send it.
+	 * @param fileName The name of the file to send.
+	 * @param fileContent The content of the file to send in a UTF-8 format.
+	 */
 	public FileContent(String fileName, byte[] fileContent)
 	{
 		super(fileName);
 		this.fileContent = fileContent;
-		/*
-		File fichierALire = new File(fileName);
-		if(fichierALire.length() != 0 && fichierALire.length() < Integer.MAX_VALUE)
-		{
-			FileInputStream streamToReadFile = new FileInputStream(fichierALire);
-			byte[] bytesRead = new byte[(int)fichierALire.length()];
-			try
-			{
-				streamToReadFile.read(bytesRead);
-			}
-			finally
-			{
-				streamToReadFile.close();
-			}
-			fileContent = new String(bytesRead, "UTF-8");
-		}
-		else
-		{
-			throw new IOException("The file exceed the maximum size of " + Integer.MAX_VALUE + " bytes.");
-		}
-		*/
 	}
 	
+	/**
+	 * Retrieve the content of the file in a String.
+	 * @return The content of the file or null if the UTF-8 format is not a valid name.
+	 */
 	public String getFileContent() {
 		try {
 			return new String(fileContent, "UTF-8");
