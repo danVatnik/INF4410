@@ -1,14 +1,14 @@
 package shared;
 
 public class FileLockedInfo extends FileCommonInfo {
-	private final byte[] clientIdFileLocked;
+	private final int clientNumberFileLocked;
 	
-	public FileLockedInfo(String fileName, byte[] clientIdFileLocked) {
+	public FileLockedInfo(String fileName, int clientNumberFileLocked) {
 		super(fileName);
-		this.clientIdFileLocked = clientIdFileLocked;
+		this.clientNumberFileLocked = clientNumberFileLocked;
 	}
 	
-	public byte[] getClientIdThatLockedFile() {
-		return clientIdFileLocked;
+	public int getClientNumberThatLockedFile() {
+		return clientNumberFileLocked;
 	}
 }

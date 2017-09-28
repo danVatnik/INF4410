@@ -9,6 +9,7 @@ import java.nio.channels.FileLock;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 
+import server.clientGeneration.ClientIdGenerator;
 import shared.FileLockedInfo;
 
 /**
@@ -52,12 +53,11 @@ public class FileLockStructure {
 	 * @return An object containing the fileName and the client identifier that own the lock.
 	 */
 	public FileLockedInfo createInfoOnLockedFile(String fileName) {
-		byte[] ownerOfLock = null;
+		int clientNumber = -1;
 		if(fileLocks.containsKey(fileName)) {
-			ownerOfLock = fileLocks.get(fileName).getClientIdentifier();
-			
+			clientNumber = ClientIdGenerator.getInstance().getClientNumberFromId(fileLocks.get(fileName).getClientIdentifier());
 		}
-		return new FileLockedInfo(fileName, ownerOfLock);
+		return new FileLockedInfo(fileName, clientNumber);
 	}
 	
 	/**

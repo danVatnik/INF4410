@@ -18,10 +18,10 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import server.clientGeneration.ClientIdGenerator;
 import shared.FileContent;
 import shared.FileLockedInfo;
 import shared.FileServerInterface;
@@ -71,13 +71,11 @@ public class FileServer implements FileServerInterface {
 		}
 	}
 	
-	private final static int NB_BYTES_FOR_CLIENT_ID = 16;
 	private final static String FOLDER_NAME_FOR_SHARED_FILES = "sharedFiles";
 	private final static String RMI_REGISTRY_SERVER_NAME = "FileServer";
 	
 	private final FileSystem fileSystem;
 	private final String rootFolderName;
-	private final SecureRandom idGenerator;
 	private final VisitContentOfARepository folderVisitor;
 	private MessageDigest md5Calculator;
 	private final FileLockStructure filesLocked;
@@ -101,7 +99,6 @@ public class FileServer implements FileServerInterface {
 		this.rootFolderName = rootFolderName;
 		filesLocked = new FileLockStructure();
 		folderVisitor = new VisitContentOfARepository(filesLocked);
-		idGenerator = new SecureRandom();
 		try {
 			md5Calculator = MessageDigest.getInstance("MD5");
 		}
@@ -121,9 +118,7 @@ public class FileServer implements FileServerInterface {
 	
 	@Override
 	public byte[] generateClientId() {
-		byte[] clientId = new byte[NB_BYTES_FOR_CLIENT_ID];
-		idGenerator.nextBytes(clientId);
-		return clientId;
+		return ClientIdGenerator.getInstance().generateNewClientId();
 	}
 
 	@Override
