@@ -47,11 +47,12 @@ public interface FileServerInterface extends Remote {
 	 * @param fileName The name of the file to get the content.
 	 * @param checksum The checksum of the last version of the file or null to force the server to return the content of the file.
 	 * @return The content of the file or null if the checksum passed in parameter is identical as the checksum of the file of the server.
+	 * @throws FileNotFound Exception thrown if the file was not found.
 	 * @throws IOException Exception thrown if an error occur during reading the file.
 	 * @throws RemoteException Exception thrown if an error with the connection occur.
 	 */
 	@Nullable
-	byte[] get(String fileName, @Nullable byte[] checksum) throws IOException, RemoteException;
+	byte[] get(String fileName, @Nullable byte[] checksum) throws FileNotFoundException, IOException, RemoteException;
 	
 	/**
 	 * Lock a file to write some content inside.

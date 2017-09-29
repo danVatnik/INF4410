@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -20,6 +21,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 
 import server.clientGeneration.ClientIdGenerator;
 import shared.FileContent;
@@ -49,12 +51,12 @@ public class FileServer implements FileServerInterface {
 
 		@Override
 		public FileVisitResult preVisitDirectory(Path arg0, BasicFileAttributes arg1) throws IOException {
-			return FileVisitResult.SKIP_SUBTREE;
+			return FileVisitResult.CONTINUE;
 		}
 
 		@Override
 		public FileVisitResult visitFile(Path pathToFile, BasicFileAttributes fileAttributes) throws IOException {
-			retrievedLockedInfo.add(fileLockStructure.createInfoOnLockedFile(pathToFile.toString()));
+			retrievedLockedInfo.add(fileLockStructure.createInfoOnLockedFile(pathToFile));
 			return FileVisitResult.CONTINUE;
 		}
 
@@ -107,7 +109,7 @@ public class FileServer implements FileServerInterface {
 		}
 		File folderToCreate = new File(rootFolderName);
 		if(folderToCreate.exists()) {
-			if(!folderToCreate.isDirectory() || folderToCreate.canRead() || !folderToCreate.canWrite()) {
+			if(!folderToCreate.isDirectory() || !folderToCreate.canRead() || !folderToCreate.canWrite()) {
 				throw new IllegalAccessException("A folder at the location " + folderToCreate + " already exists, but it cannot be read or written.");
 			}
 		}
@@ -128,7 +130,7 @@ public class FileServer implements FileServerInterface {
 
 	@Override
 	public FileLockedInfo[] list() throws IOException {
-		Files.walkFileTree(fileSystem.getPath(rootFolderName), folderVisitor);
+		Files.walkFileTree(fileSystem.getPath(rootFolderName), EnumSet.noneOf(FileVisitOption.class), 1, folderVisitor);
 		return folderVisitor.getFileLockInfo();
 	}
 
@@ -139,8 +141,8 @@ public class FileServer implements FileServerInterface {
 	}
 
 	@Override
-	public byte[] get(String fileName, byte[] checksum) throws IOException {
-		byte[] fileContent = filesLocked.readFile(fileSystem.getPath(rootFolderName, fileName).toString());
+	public byte[] get(String fileName, byte[] checksum) throws FileNotFoundException, IOException {
+		byte[] fileContent = filesLocked.readFile(fileSystem.getPath(rootFolderName, fileName));
 		md5Calculator.update(fileContent);
 		if(Arrays.equals(md5Calculator.digest(), checksum)) {
 			fileContent = null;
@@ -150,13 +152,14 @@ public class FileServer implements FileServerInterface {
 
 	@Override
 	public byte[] lock(String fileName, byte[] clientId, byte[] checksum) throws FileNotFoundException, IllegalStateException, IOException {
-		filesLocked.addLockToFile(fileSystem.getPath(rootFolderName, fileName).toString(), clientId);
-		return get(fileName, checksum);
+		Path completePath = fileSystem.getPath(rootFolderName, fileName);
+		filesLocked.addLockToFile(completePath, clientId);
+		return get(completePath.getFileName().toString(), checksum);
 	}
 
 	@Override
 	public void push(String fileName, byte[] fileContent, byte[] clientId) throws FileNotFoundException, IllegalStateException, IllegalAccessException, IOException {
-		String filePath = fileSystem.getPath(rootFolderName, fileName).toString();
+		Path filePath = fileSystem.getPath(rootFolderName, fileName);
 		filesLocked.replaceFileContent(filePath, fileContent, clientId);
 		filesLocked.releaseLockFromFile(filePath, clientId);
 	}

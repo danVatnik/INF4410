@@ -7,7 +7,7 @@ package shared;
  */
 public class FileLockedInfo extends FileCommonInfo {
 	private final int clientNumberFileLocked;
-	
+
 	/**
 	 * Store the information of the client number who own a file.
 	 * @param fileName The name of the file.
@@ -17,7 +17,7 @@ public class FileLockedInfo extends FileCommonInfo {
 		super(fileName);
 		this.clientNumberFileLocked = clientNumberFileLocked;
 	}
-	
+
 	/**
 	 * Get the client number who locked the file.
 	 * @return The client number who locked the file.

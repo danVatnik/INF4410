@@ -20,6 +20,7 @@ public class FileLockOwner {
 	 */
 	public FileLockOwner(byte[] clientIdentifier, FileLock fileLock) {
 		this.clientIdentifier = Arrays.copyOf(clientIdentifier, clientIdentifier.length);
+		this.fileLock = fileLock;
 	}
 	
 	/**
