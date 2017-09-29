@@ -73,12 +73,51 @@ public class FileServer implements FileServerInterface {
 		}
 	}
 	
+	private static class RetrieveContentOfFiles implements FileVisitor<Path> {
+		private FileLockStructure fileLockStructure;
+		private final ArrayList<FileContent> retrievedFileContent;
+		
+		public RetrieveContentOfFiles(FileLockStructure fileLockStructure) {
+			this.fileLockStructure = fileLockStructure;
+			retrievedFileContent = new ArrayList<>();
+		}
+		
+		@Override
+		public FileVisitResult postVisitDirectory(Path arg0, IOException arg1) throws IOException {
+			return FileVisitResult.CONTINUE;
+		}
+
+		@Override
+		public FileVisitResult preVisitDirectory(Path arg0, BasicFileAttributes arg1) throws IOException {
+			return FileVisitResult.CONTINUE;
+		}
+
+		@Override
+		public FileVisitResult visitFile(Path pathToFile, BasicFileAttributes fileAttributes) throws IOException {
+			retrievedFileContent.add(new FileContent(pathToFile.getFileName().toString(), fileLockStructure.readFile(pathToFile)));
+			return FileVisitResult.CONTINUE;
+		}
+
+		@Override
+		public FileVisitResult visitFileFailed(Path arg0, IOException exceptionOccured) throws IOException {
+			retrievedFileContent.clear();
+			throw exceptionOccured;
+		}
+		
+		public FileContent[] getFileContentInfo() {
+			FileContent[] infoRetrieved = retrievedFileContent.toArray(new FileContent[0]);
+			retrievedFileContent.clear();
+			return infoRetrieved;
+		}
+	}
+	
 	private final static String FOLDER_NAME_FOR_SHARED_FILES = "sharedFiles";
 	private final static String RMI_REGISTRY_SERVER_NAME = "FileServer";
 	
 	private final FileSystem fileSystem;
 	private final String rootFolderName;
 	private final VisitContentOfARepository folderVisitor;
+	private final RetrieveContentOfFiles fileContentVisitor;
 	private MessageDigest md5Calculator;
 	private final FileLockStructure filesLocked;
 	
@@ -101,6 +140,7 @@ public class FileServer implements FileServerInterface {
 		this.rootFolderName = rootFolderName;
 		filesLocked = new FileLockStructure();
 		folderVisitor = new VisitContentOfARepository(filesLocked);
+		fileContentVisitor = new RetrieveContentOfFiles(filesLocked);
 		try {
 			md5Calculator = MessageDigest.getInstance("MD5");
 		}
@@ -135,9 +175,9 @@ public class FileServer implements FileServerInterface {
 	}
 
 	@Override
-	public FileContent[] syncLocalDir() {
-		// TODO Auto-generated method stub
-		return null;
+	public FileContent[] syncLocalDir() throws IOException {
+		Files.walkFileTree(fileSystem.getPath(rootFolderName), EnumSet.noneOf(FileVisitOption.class), 1, fileContentVisitor);
+		return fileContentVisitor.getFileContentInfo();
 	}
 
 	@Override
