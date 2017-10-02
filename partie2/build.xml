@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project basedir="." default="build-jar" name="TP1_part2">
 	<property name="debuglevel" value="source,lines,vars" />
-	<path id="TP1_parti2.classpath">
+	<path id="TP1_part2.classpath">
 		<pathelement location="bin" />
 	</path>
 	<target name="init">
