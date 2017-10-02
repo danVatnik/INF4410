@@ -33,4 +33,12 @@ public class FileContent extends FileCommonInfo {
 			return null;
 		}
 	}
+	
+	/**
+	 * Retrieve the content of the file as bytes array.
+	 * @return The content of the file as a byte array.
+	 */
+	public byte[] getFileContentBytes(){
+		return fileContent;
+	}
 }

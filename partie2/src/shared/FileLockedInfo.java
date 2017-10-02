@@ -1,13 +1,20 @@
 package shared;
 
+import java.io.Serializable;
+
 /**
  * Class to transfer the information about the person who locked a file.
  * @author Dominik Courcelles, Dan Vatnik
  *
  */
-public class FileLockedInfo extends FileCommonInfo {
+public class FileLockedInfo extends FileCommonInfo implements Serializable{
 	private final int clientNumberFileLocked;
 
+	public FileLockedInfo(){
+		super();
+		clientNumberFileLocked = -1;
+	}
+	
 	/**
 	 * Store the information of the client number who own a file.
 	 * @param fileName The name of the file.

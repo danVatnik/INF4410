@@ -1,13 +1,20 @@
 package shared;
 
+import java.io.Serializable;
+
 /**
  * Base class for file exchange information. This class contains only the fileName and children can
  * add other information that should be exchanged between the client and the server.
  * @author Dominik Courcelles, Dan Vatnik
  *
  */
-public class FileCommonInfo {
+public class FileCommonInfo implements Serializable{
 	private String fileName;
+	
+	public FileCommonInfo()
+	{
+		
+	}
 	
 	/**
 	 * Create a class to handle base information on a file.
