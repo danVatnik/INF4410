@@ -260,7 +260,7 @@ public class FileClient {
 	/**
 	 * Calculate the checksum of a file.
 	 * @param file The file to calculate the checksum.
-	 * @return The checksum.
+	 * @return The checksum or null if the file doesn't exist.
 	 */
 	private byte[] getChecksum(String file){
 		byte[] checksum = null;
@@ -295,6 +295,8 @@ public class FileClient {
 		}
 		catch (AlreadyLockedByClient e){
 			System.out.println(file + ALREADY_LOCKED + e.getClientNumber());
+		} catch(FileNotFoundException e) {
+			System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

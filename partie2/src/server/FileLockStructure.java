@@ -47,10 +47,14 @@ public class FileLockStructure {
 		if(ClientIdGenerator.getInstance().getClientNumberFromId(clientIdentifier) == -1) {
 			throw new InvalidClientIdentifier("The client identifier is not valid.");
 		}
+		File fileToLock = fileName.toFile();
+		if(!fileToLock.exists()) {
+			throw new FileNotFoundException();
+		}
 		if(fileLocks.containsKey(fileName.toString())) {
 			throw new IllegalStateException("The file " + fileName.getFileName().toString() + " is already locked.");
 		}
-		FileLock fileLock = new RandomAccessFile(fileName.toFile(), "rw").getChannel().lock();
+		FileLock fileLock = new RandomAccessFile(fileToLock, "rw").getChannel().lock();
 		fileLocks.put(fileName.toString(), new FileLockOwner(clientIdentifier, fileLock));
 	}
 	
