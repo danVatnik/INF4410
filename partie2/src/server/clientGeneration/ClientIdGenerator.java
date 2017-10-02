@@ -47,6 +47,8 @@ public class ClientIdGenerator extends HashMap<ClientId, Integer> {
 	 * @return The client number associated or -1 if the client identifier doesn't exist.
 	 */
 	public int getClientNumberFromId(byte[] clientId) {
-		return this.get(new ClientId(clientId));
+		ClientId client = new ClientId(clientId);
+		Integer clientNumber = this.get(client);
+		return clientNumber != null ? clientNumber : -1;
 	}
 }

@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
+import shared.exceptions.InvalidClientIdentifier;
+
 public interface FileServerInterface extends Remote {
 	/**
 	 * Generate a new client id. It is composed of an array of bytes.
@@ -58,10 +60,11 @@ public interface FileServerInterface extends Remote {
 	 * @return The content of the file or null if the checksum provided is the same as the checksum of the server file.
 	 * @throws FileNotFoundException The file asked to lock doesn't exist.
 	 * @throws IllegalStateException A lock already exists on the file.
+	 * @throws InvalidClientIdentifier The client identifier was not created by this server.
 	 * @throws IOException Exception thrown if an error occur during reading the file or during locking the file.
 	 * @throws RemoteException Exception thrown if an error with the connection occur.
 	 */
-	byte[] lock(String fileName, byte[] clientId, byte[] checksum) throws FileNotFoundException, IllegalStateException, IOException, RemoteException;
+	byte[] lock(String fileName, byte[] clientId, byte[] checksum) throws FileNotFoundException, IllegalStateException, InvalidClientIdentifier, IOException, RemoteException;
 	
 	/**
 	 * Replace the content of a file. The file must be locked to be pushed.
@@ -71,8 +74,9 @@ public interface FileServerInterface extends Remote {
 	 * @throws FileNotFoundException The file doesn't exist.
 	 * @throws IllegalStateException The file is not locked.
 	 * @throws IllegalAccessException The file is locked by another user.
+	 * @throws InvalidClientIdentifier The client identifier was not created by this server.
 	 * @throws IOException An error occur while writing to the file or while removing the lock.
 	 * @throws RemoteException Exception thrown if an error with the connection occur.
 	 */
-	void push(String fileName, byte[] fileContent, byte[] clientId) throws FileNotFoundException, IllegalStateException, IllegalAccessException, IOException, RemoteException;
+	void push(String fileName, byte[] fileContent, byte[] clientId) throws FileNotFoundException, IllegalStateException, IllegalAccessException, InvalidClientIdentifier, IOException, RemoteException;
 }

@@ -8,7 +8,7 @@ import java.io.Serializable;
  * @author Dominik Courcelles, Dan Vatnik
  *
  */
-public class FileCommonInfo implements Serializable{
+public class FileCommonInfo implements Serializable {
 	private String fileName;
 	
 	public FileCommonInfo()
