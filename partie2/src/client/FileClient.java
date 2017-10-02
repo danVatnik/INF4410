@@ -1,13 +1,10 @@
 package client;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -19,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import shared.FileContent;
 import shared.FileLockedInfo;
 import shared.FileServerInterface;
+import shared.exceptions.AlreadyLockedByClient;
 import shared.exceptions.InvalidClientIdentifier;
 
 public class FileClient {
@@ -31,9 +29,12 @@ public class FileClient {
 	private final static String FILE_ADDED = " ajouté.";
 	private final static String ALREADY_EXISTS = " existe déjà.";
 	private final static String FILE_SENT_TO_SERVER = " a été envoyé au serveur";
-	private final static String COMMAND_REFUSED = "opération refusée:";
-	private final static String ERROR_PUSH_LOCK = " vous devez d'abord verrouiller le fichier";
+	private final static String COMMAND_REFUSED = "opération refusée : ";
+	private final static String ERROR_NOT_CREATED = " n'existe pas.";
+	private final static String ERROR_PUSH_LOCK = "vous devez d'abord verrouiller le fichier";
 	private final static String MISSING_ARG = "Argument manquant";
+	private final static String SYNC = " synchronisé";
+	private final static String UP_TO_DATE = " est déjà à jour";
 	
 	private final static String CLIENT_ID_FILENAME = ".CLIENT";
 	
@@ -62,9 +63,6 @@ public class FileClient {
 	}
 	
 	private void executeCommand(String[] args) {
-		String sync = " synchronisé";
-		String upToDate = " est déjà à jour";
-		
 		String command = "empty";
 		if(args.length > 0)
 			command = args[0];
@@ -85,7 +83,6 @@ public class FileClient {
 				System.out.println(fileLockInfos.length + FILES);
 	
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			break;
@@ -102,10 +99,8 @@ public class FileClient {
 						System.out.println(file + ALREADY_EXISTS);
 					
 				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -123,20 +118,17 @@ public class FileClient {
 				    
 				    if(fileContent != null){
 						Files.write(Paths.get(file), fileContent);
-						System.out.println(file + sync);
+						System.out.println(file + SYNC);
 				    }
 				    else{
-				    	System.out.println(file + upToDate);
+				    	System.out.println(file + UP_TO_DATE);
 				    }
 				    
 				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
 				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} 
 			}
@@ -201,10 +193,8 @@ public class FileClient {
 					Files.write(Paths.get(fileContent.getFileName()), fileContent.getFileContentBytes());
 				}
 			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			break;
@@ -303,13 +293,11 @@ public class FileClient {
 		    }
 		    System.out.println(file + LOCKED);
 		}
-		catch (IllegalStateException e){
-			System.out.println(file + ALREADY_LOCKED + "NEED TO GET CLIENT");
+		catch (AlreadyLockedByClient e){
+			System.out.println(file + ALREADY_LOCKED + e.getClientNumber());
 		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -324,19 +312,15 @@ public class FileClient {
 			stub.push(file, readFile(file), getOrCreateClientId());
 			System.out.println(file + FILE_SENT_TO_SERVER);
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
 		} catch (IllegalStateException e) {
-			// TODO Auto-generated catch block
+			System.out.println(COMMAND_REFUSED + ERROR_PUSH_LOCK);
 			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (AlreadyLockedByClient e) {
+			System.out.println(COMMAND_REFUSED + file + ALREADY_LOCKED + e.getClientNumber());
 		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

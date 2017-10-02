@@ -27,6 +27,8 @@ import server.clientGeneration.ClientIdGenerator;
 import shared.FileContent;
 import shared.FileLockedInfo;
 import shared.FileServerInterface;
+import shared.exceptions.AlreadyLockedByClient;
+import shared.exceptions.InvalidClientIdentifier;
 
 /**
  * A simple shared file system. Users can create, get, lock and push files to the server.
@@ -191,14 +193,14 @@ public class FileServer implements FileServerInterface {
 	}
 
 	@Override
-	public byte[] lock(String fileName, byte[] clientId, byte[] checksum) throws FileNotFoundException, IllegalStateException, IOException {
+	public byte[] lock(String fileName, byte[] clientId, byte[] checksum) throws FileNotFoundException, AlreadyLockedByClient, IllegalStateException, IOException {
 		Path completePath = fileSystem.getPath(rootFolderName, fileName);
 		filesLocked.addLockToFile(completePath, clientId);
 		return get(completePath.getFileName().toString(), checksum);
 	}
 
 	@Override
-	public void push(String fileName, byte[] fileContent, byte[] clientId) throws FileNotFoundException, IllegalStateException, IllegalAccessException, IOException {
+	public void push(String fileName, byte[] fileContent, byte[] clientId) throws FileNotFoundException, IllegalStateException, AlreadyLockedByClient, InvalidClientIdentifier, IOException {
 		Path filePath = fileSystem.getPath(rootFolderName, fileName);
 		filesLocked.replaceFileContent(filePath, fileContent, clientId);
 		filesLocked.releaseLockFromFile(filePath, clientId);

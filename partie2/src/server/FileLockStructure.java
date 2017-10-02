@@ -13,6 +13,7 @@ import java.util.HashMap;
 
 import server.clientGeneration.ClientIdGenerator;
 import shared.FileLockedInfo;
+import shared.exceptions.AlreadyLockedByClient;
 import shared.exceptions.InvalidClientIdentifier;
 
 /**
@@ -81,15 +82,16 @@ public class FileLockStructure {
 	 * @throws IllegalStateException Exception thrown if the file is not locked.
 	 * @throws IOException Exception thrown if there is an error while replacing the content of the file.
 	 */
-	public void replaceFileContent(Path fileName, byte[] newContent, byte[] clientIdentifier) throws FileNotFoundException, IllegalAccessException, IllegalStateException, IOException {
+	public void replaceFileContent(Path fileName, byte[] newContent, byte[] clientIdentifier) throws FileNotFoundException, AlreadyLockedByClient, IllegalStateException, IOException {
 		if(!fileLocks.containsKey(fileName.toString())) {
 			throw new IllegalStateException("The file " + fileName.getFileName().toString() + " is not locked.");
 		}
 		
 		FileLockOwner fileLockOwner = fileLocks.get(fileName.toString());
 		if(!fileLockOwner.fileLockedByClient(clientIdentifier)) {
-			throw new IllegalAccessException("The file " + fileName.getFileName().toString() + " cannot be unlocked." +
-					"The clientIdentifier " + clientIdentifier + " is not the identifier who locked the file.");
+			int clientNumber = ClientIdGenerator.getInstance().getClientNumberFromId(fileLockOwner.getClientIdentifier());
+			throw new AlreadyLockedByClient("The file " + fileName.getFileName().toString() + " cannot be unlocked." +
+					"The clientIdentifier " + clientIdentifier + " is not the identifier who locked the file.", clientNumber);
 		}
 		
 		FileChannel fileChannel = fileLockOwner.getFileLock().channel();
@@ -138,11 +140,11 @@ public class FileLockStructure {
 	 * @param fileName The path to the file to release the lock.
 	 * @param clientIdentifier The identifier of the client to verify if it is the current lock is owned by this client.
 	 * @throws IllegalStateException Exception thrown if the file is not locked.
-	 * @throws IllegalAccessException Exception thrown if the file lock is not owned by the clientIdentifier.
+	 * @throws AlreadyLockedByClient Exception thrown if the file lock is not owned by the clientIdentifier.
 	 * @throws InvalidClientIdentifier Exception thrown if the client identifier was not created by the ClientIdGenerator instance.
 	 * @throws IOException Exception thrown if an error occur while removing the lock.
 	 */
-	public void releaseLockFromFile(Path fileName, byte[] clientIdentifier) throws IllegalStateException, IllegalAccessException, InvalidClientIdentifier, IOException {
+	public void releaseLockFromFile(Path fileName, byte[] clientIdentifier) throws IllegalStateException, AlreadyLockedByClient, InvalidClientIdentifier, IOException {
 		if(ClientIdGenerator.getInstance().getClientNumberFromId(clientIdentifier) == -1) {
 			throw new InvalidClientIdentifier("The client identifier is not valid.");
 		}
@@ -152,8 +154,9 @@ public class FileLockStructure {
 		
 		FileLockOwner fileLockOwner = fileLocks.get(fileName.toString());
 		if(!fileLockOwner.fileLockedByClient(clientIdentifier)) {
-			throw new IllegalAccessException("The file " + fileName.getFileName().toString() + " cannot be unlocked." +
-					"The clientIdentifier " + clientIdentifier + " is not the identifier who locked the file.");
+			int clientNumber = ClientIdGenerator.getInstance().getClientNumberFromId(fileLockOwner.getClientIdentifier());
+			throw new AlreadyLockedByClient("The file " + fileName.getFileName().toString() + " cannot be unlocked." +
+					"The clientIdentifier " + clientIdentifier + " is not the identifier who locked the file.", clientNumber);
 		}
 		
 		fileLockOwner.getFileLock().channel().close();
