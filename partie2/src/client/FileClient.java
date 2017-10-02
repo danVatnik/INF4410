@@ -171,6 +171,12 @@ public class FileClient {
 		System.out.println("syncLocalDir: syncLocalDir");
 	}
 	
+	/**
+	 * Locks file on the server
+	 * @param file  file name
+	 * @return void
+	 * @throws IOException Exception thrown if an error occur while writing on the disk.
+	 */
 	private void lock(String file) throws IOException{
 		
 		boolean renewId = false;
@@ -196,7 +202,13 @@ public class FileClient {
 		}
 	}
 	
-private void push(String file) throws IOException{
+	/**
+	 * Pushes local file to the server
+	 * @param file  file name
+	 * @return void
+	 * @throws IOException Exception thrown if an error occur while writing on the disk.
+	 */
+	private void push(String file) throws IOException{
 		
 		boolean renewId = false;
 		try {
@@ -307,19 +319,12 @@ private void push(String file) throws IOException{
 	 * @param file The file to lock.
 	 * @throws InvalidClientIdentifier The identifier is no longer valid. It needs to be recreated.
 	 */
-	private void performLock(String file) throws InvalidClientIdentifier, IOException {
-		try {
-			byte[] fileContent = stub.lock(file, getOrCreateClientId(), getChecksum(file));
-		    if(fileContent != null) {
-				Files.write(Paths.get(file), fileContent);				
-		    }
-		    System.out.println(file + LOCKED);
-		}
-		catch (AlreadyLockedByClient e){
-			System.out.println(file + ALREADY_LOCKED + e.getClientNumber());
-		} catch(FileNotFoundException e) {
-			System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
-		}
+	private void performLock(String file) throws InvalidClientIdentifier, IOException, AlreadyLockedByClient {
+		byte[] fileContent = stub.lock(file, getOrCreateClientId(), getChecksum(file));
+	    if(fileContent != null) {
+			Files.write(Paths.get(file), fileContent);				
+	    }
+	    System.out.println(file + LOCKED);
 	}
 	
 	/**
@@ -327,18 +332,9 @@ private void push(String file) throws IOException{
 	 * @param file The file to replace content.
 	 * @throws InvalidClientIdentifier The identifier is no longer valid. It needs to be recreated.
 	 */
-	private void performPush(String file) throws InvalidClientIdentifier, IOException {
-		try {
-			stub.push(file, readFile(file), getOrCreateClientId());
-			System.out.println(file + FILE_SENT_TO_SERVER);
-		} catch (FileNotFoundException e) {
-			System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
-		} catch (IllegalStateException e) {
-			System.out.println(COMMAND_REFUSED + ERROR_PUSH_LOCK);
-			e.printStackTrace();
-		} catch (AlreadyLockedByClient e) {
-			System.out.println(COMMAND_REFUSED + file + ALREADY_LOCKED + e.getClientNumber());
-		}
+	private void performPush(String file) throws InvalidClientIdentifier, IOException, AlreadyLockedByClient, FileNotFoundException {
+		stub.push(file, readFile(file), getOrCreateClientId());
+		System.out.println(file + FILE_SENT_TO_SERVER);
 	}
 	
 	/**
