@@ -127,6 +127,12 @@ public class FileLockStructure {
 		return bytesRead;
 	}
 
+	/**
+	 * Read the content of the file with the fileChannel.
+	 * @param fileChannel Used to read the file.
+	 * @return The content of the file
+	 * @throws IOException Exception thrown if an error occur while reading the file.
+	 */
 	private byte[] readFileFromExistingChannel(FileChannel fileChannel) throws IOException {
 		fileChannel.position(0);
 		int fileSize = (int)fileChannel.size();
@@ -135,6 +141,12 @@ public class FileLockStructure {
 		return bufferToReadFile.array();
 	}
 
+	/**
+	 * Read the content of a file by creating a fileStream.
+	 * @param fileName The fileName to read.
+	 * @return The content of the file.
+	 * @throws IOException Exception thrown if an error occur while reading the file.
+	 */
 	private byte[] readFileFromInputFileStream(Path fileName) throws IOException {
 		File file = fileName.toFile();
         FileInputStream fileStream = new FileInputStream(file);
