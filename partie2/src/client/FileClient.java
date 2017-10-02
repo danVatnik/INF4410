@@ -24,7 +24,7 @@ public class FileClient {
 	private final static String NOT_LOCKED = "\tnon verrouillé";
 	private final static String LOCKED_BY_CLIENT = "\tverrouillé par client ";
 	private final static String ALREADY_LOCKED = " est déjà verrouillé par client ";
-	private final static String LOCKED = "verrouillé";
+	private final static String LOCKED = " verrouillé";
 	private final String FILES = " fichier(s)";
 	private final static String FILE_ADDED = " ajouté.";
 	private final static String ALREADY_EXISTS = " existe déjà.";
@@ -98,6 +98,7 @@ public class FileClient {
 			}
 			else{
 				System.out.println(MISSING_ARG);
+				printHelp();
 			}
 			break;
 
@@ -121,48 +122,27 @@ public class FileClient {
 			}
 			else{
 				System.out.println(MISSING_ARG);
+				printHelp();
 			}
 			break;
 
 		case "push":
 			if(args.length == 2) {
-				boolean success = false;
-				try {
-					performPush(args[1]);
-					success = true;
-				} catch(InvalidClientIdentifier e) {
-					System.err.println("L'identifiant n'est plus valide. Renouvellement de l'identifiant.");
-				}
-
-				if(!success) {
-					createClientId();
-					performPush(args[1]);
-				}
+				push(args[1]);
 			}
 			else{
 				System.out.println(MISSING_ARG);
+				printHelp();
 			}
 			break;
 
 		case "lock":
-			if(args.length == 2){
-				String file = args[1];
-				
-				boolean success = false;
-				try {
-					performLock(file);
-					success = true;
-				} catch(InvalidClientIdentifier e) {
-					System.err.println("L'identifiant n'est plus valide. Renouvellement de l'identifiant.");
-				}
-				
-				if(!success) {
-					createClientId();
-					performLock(args[1]);
-				}
+			if(args.length == 2){		
+				lock(args[1]);
 			}
 			else {
 				System.out.println(MISSING_ARG);
+				printHelp();
 			}
 			break;
 
@@ -174,7 +154,74 @@ public class FileClient {
 			break;
 			
 		default:
-			System.out.println("Help");
+			System.out.println("Commande invalide");
+			printHelp();
+		}
+	}
+	
+	private void printHelp(){
+		System.out.println();
+		System.out.println("Commandes: ");
+		System.out.println("==========");
+		System.out.println("list: list");
+		System.out.println("create: create [nom_fichier]");
+		System.out.println("get: get [nom_fichier]");
+		System.out.println("lock: lock [nom_fichier]");
+		System.out.println("push: push [nom_fichier]");
+		System.out.println("syncLocalDir: syncLocalDir");
+	}
+	
+	private void lock(String file) throws IOException{
+		
+		boolean renewId = false;
+		try {
+			performLock(file);
+		} catch(InvalidClientIdentifier e) {
+			renewId = true;
+		} catch(AlreadyLockedByClient e){
+			System.out.println(COMMAND_REFUSED + file + ALREADY_LOCKED  + e.getClientNumber());
+		} catch(FileNotFoundException e){
+			System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
+		}
+		
+		if(renewId) {
+			createClientId();
+			try {
+				performLock(file);
+			} catch(AlreadyLockedByClient e){
+				System.out.println(COMMAND_REFUSED + file + ALREADY_LOCKED  + e.getClientNumber());
+			} catch(FileNotFoundException e){
+				System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
+			}
+		}
+	}
+	
+private void push(String file) throws IOException{
+		
+		boolean renewId = false;
+		try {
+			performPush(file);
+		} catch(InvalidClientIdentifier e) {
+			renewId = true;
+		} catch(IllegalStateException e){
+			System.out.println(COMMAND_REFUSED + ERROR_PUSH_LOCK);
+		} catch(AlreadyLockedByClient e){
+			System.out.println(COMMAND_REFUSED + file + ALREADY_LOCKED  + e.getClientNumber());
+		} catch(FileNotFoundException e){
+			System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
+		}
+		
+		if(renewId) {
+			createClientId();
+			try {
+				performPush(file);
+			} catch(IllegalStateException e){
+				System.out.println(COMMAND_REFUSED + ERROR_PUSH_LOCK);
+			} catch(AlreadyLockedByClient e){
+				System.out.println(COMMAND_REFUSED + file + ALREADY_LOCKED  + e.getClientNumber());
+			} catch(FileNotFoundException e){
+				System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
+			}
 		}
 	}
 	
