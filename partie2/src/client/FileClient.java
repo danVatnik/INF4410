@@ -57,12 +57,16 @@ public class FileClient {
 			System.exit(1);
 		}
 		
-		client.executeCommand(args);
-		
-		
+		try {
+			client.executeCommand(args);
+		} catch(IOException e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 	
-	private void executeCommand(String[] args) {
+	private void executeCommand(String[] args) throws IOException {
 		String command = "empty";
 		if(args.length > 0)
 			command = args[0];
@@ -70,50 +74,37 @@ public class FileClient {
 		
 		switch(command){
 		case "list":
-			try {
-				FileLockedInfo[] fileLockInfos = stub.list();
-				for(FileLockedInfo lockInfo : fileLockInfos){
-					if(lockInfo.getClientNumberThatLockedFile() == -1){
-						 System.out.println("* " + lockInfo.getFileName() + NOT_LOCKED);
-					}
-					else{
-						System.out.println("* " + lockInfo.getFileName() + LOCKED_BY_CLIENT + lockInfo.getClientNumberThatLockedFile());
-					}
+			FileLockedInfo[] fileLockInfos = stub.list();
+			for(FileLockedInfo lockInfo : fileLockInfos){
+				if(lockInfo.getClientNumberThatLockedFile() == -1){
+					 System.out.println("* " + lockInfo.getFileName() + NOT_LOCKED);
 				}
-				System.out.println(fileLockInfos.length + FILES);
-	
-			} catch (IOException e) {
-				e.printStackTrace();
+				else{
+					System.out.println("* " + lockInfo.getFileName() + LOCKED_BY_CLIENT + lockInfo.getClientNumberThatLockedFile());
+				}
 			}
+			System.out.println(fileLockInfos.length + FILES);
 			break;
+
 		case "create":
 			if(args.length == 2){
 				String file = args[1];
-				try {
-					
-					boolean success = stub.create(file);
-					
-					if(success)
-						System.out.println(file + FILE_ADDED);
-					else
-						System.out.println(file + ALREADY_EXISTS);
-					
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				boolean success = stub.create(file);
+				
+				if(success)
+					System.out.println(file + FILE_ADDED);
+				else
+					System.out.println(file + ALREADY_EXISTS);
 			}
 			else{
 				System.out.println(MISSING_ARG);
 			}
 			break;
+
 		case "get":
-			if(args.length == 2){
+			if(args.length == 2) {
 				String file = args[1];
-				
 				try{
-						
 				    byte[] fileContent = stub.get(file, getChecksum(file));
 				    
 				    if(fileContent != null){
@@ -126,16 +117,13 @@ public class FileClient {
 				    
 				} catch (FileNotFoundException e) {
 					System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				} 
+				}
 			}
 			else{
 				System.out.println(MISSING_ARG);
 			}
 			break;
+
 		case "push":
 			if(args.length == 2) {
 				boolean success = false;
@@ -147,20 +135,15 @@ public class FileClient {
 				}
 
 				if(!success) {
-					try {
-						createClientId();
-						performPush(args[1]);
-					} catch(RemoteException e) {
-						e.printStackTrace();
-					} catch(IOException e) {
-						e.printStackTrace();
-					}
+					createClientId();
+					performPush(args[1]);
 				}
 			}
 			else{
 				System.out.println(MISSING_ARG);
 			}
 			break;
+
 		case "lock":
 			if(args.length == 2){
 				String file = args[1];
@@ -174,30 +157,22 @@ public class FileClient {
 				}
 				
 				if(!success) {
-					try {
-						createClientId();
-						performLock(args[1]);
-					} catch(IOException e) {
-						e.printStackTrace();
-					}
+					createClientId();
+					performLock(args[1]);
 				}
 			}
 			else {
 				System.out.println(MISSING_ARG);
 			}
 			break;
+
 		case "syncLocalDir":
-			try {
-				FileContent[] filesContent = stub.syncLocalDir();
-				for(FileContent fileContent : filesContent){
-					Files.write(Paths.get(fileContent.getFileName()), fileContent.getFileContentBytes());
-				}
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
+			FileContent[] filesContent = stub.syncLocalDir();
+			for(FileContent fileContent : filesContent){
+				Files.write(Paths.get(fileContent.getFileName()), fileContent.getFileContentBytes());
 			}
 			break;
+			
 		default:
 			System.out.println("Help");
 		}
@@ -262,7 +237,7 @@ public class FileClient {
 	 * @param file The file to calculate the checksum.
 	 * @return The checksum or null if the file doesn't exist.
 	 */
-	private byte[] getChecksum(String file){
+	private byte[] getChecksum(String file) throws IOException {
 		byte[] checksum = null;
 		try {
 			byte[] bytesRead = readFile(file);
@@ -273,8 +248,8 @@ public class FileClient {
 			}
 		} catch (NoSuchAlgorithmException e){
 			e.printStackTrace();
-		} catch(IOException e) {
-			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("Cannot read the file to calculate the checksum.");
 		}
 		
 		return checksum;
@@ -285,7 +260,7 @@ public class FileClient {
 	 * @param file The file to lock.
 	 * @throws InvalidClientIdentifier The identifier is no longer valid. It needs to be recreated.
 	 */
-	private void performLock(String file) throws InvalidClientIdentifier {
+	private void performLock(String file) throws InvalidClientIdentifier, IOException {
 		try {
 			byte[] fileContent = stub.lock(file, getOrCreateClientId(), getChecksum(file));
 		    if(fileContent != null) {
@@ -297,10 +272,6 @@ public class FileClient {
 			System.out.println(file + ALREADY_LOCKED + e.getClientNumber());
 		} catch(FileNotFoundException e) {
 			System.out.println(COMMAND_REFUSED + file + ERROR_NOT_CREATED);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 	}
 	
@@ -309,7 +280,7 @@ public class FileClient {
 	 * @param file The file to replace content.
 	 * @throws InvalidClientIdentifier The identifier is no longer valid. It needs to be recreated.
 	 */
-	private void performPush(String file) throws InvalidClientIdentifier {
+	private void performPush(String file) throws InvalidClientIdentifier, IOException {
 		try {
 			stub.push(file, readFile(file), getOrCreateClientId());
 			System.out.println(file + FILE_SENT_TO_SERVER);
@@ -320,13 +291,17 @@ public class FileClient {
 			e.printStackTrace();
 		} catch (AlreadyLockedByClient e) {
 			System.out.println(COMMAND_REFUSED + file + ALREADY_LOCKED + e.getClientNumber());
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 	}
 	
+	/**
+	 * Create a file client to interact with the server.
+	 * @param hostname The hostname of the server to interact.
+	 * @param rmiRegistryServerName The registry of the server to get the server stub.
+	 * @throws NotBoundException
+	 * @throws AccessException
+	 * @throws RemoteException
+	 */
 	public FileClient(String hostname, String rmiRegistryServerName) throws NotBoundException, AccessException, RemoteException {
 		Registry registry = LocateRegistry.getRegistry(hostname);
 		stub = (FileServerInterface) registry.lookup(rmiRegistryServerName);
