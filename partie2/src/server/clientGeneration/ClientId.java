@@ -42,6 +42,13 @@ class ClientId
 		this.clientId = clientId;
 	}
 
+	/**
+	 * Generate the hashCode of the ClientId based on the content of the byte array.
+	 */
+	public int hashCode() {
+		return Arrays.hashCode(clientId);
+	}
+	
 	@Override
 	public boolean equals(Object element)
 	{
