@@ -45,6 +45,7 @@ class ClientId
 	/**
 	 * Generate the hashCode of the ClientId based on the content of the byte array.
 	 */
+	@Override
 	public int hashCode() {
 		return Arrays.hashCode(clientId);
 	}
