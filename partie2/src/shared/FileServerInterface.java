@@ -5,9 +5,6 @@ import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-import com.sun.istack.internal.Nullable;
-
-
 public interface FileServerInterface extends Remote {
 	/**
 	 * Generate a new client id. It is composed of an array of bytes.
@@ -51,8 +48,7 @@ public interface FileServerInterface extends Remote {
 	 * @throws IOException Exception thrown if an error occur during reading the file.
 	 * @throws RemoteException Exception thrown if an error with the connection occur.
 	 */
-	@Nullable
-	byte[] get(String fileName, @Nullable byte[] checksum) throws FileNotFoundException, IOException, RemoteException;
+	byte[] get(String fileName, byte[] checksum) throws FileNotFoundException, IOException, RemoteException;
 	
 	/**
 	 * Lock a file to write some content inside.
@@ -65,8 +61,7 @@ public interface FileServerInterface extends Remote {
 	 * @throws IOException Exception thrown if an error occur during reading the file or during locking the file.
 	 * @throws RemoteException Exception thrown if an error with the connection occur.
 	 */
-	@Nullable
-	byte[] lock(String fileName, byte[] clientId, @Nullable byte[] checksum) throws FileNotFoundException, IllegalStateException, IOException, RemoteException;
+	byte[] lock(String fileName, byte[] clientId, byte[] checksum) throws FileNotFoundException, IllegalStateException, IOException, RemoteException;
 	
 	/**
 	 * Replace the content of a file. The file must be locked to be pushed.
