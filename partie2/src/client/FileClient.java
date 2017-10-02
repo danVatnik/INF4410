@@ -19,9 +19,23 @@ import java.security.NoSuchAlgorithmException;
 import shared.FileContent;
 import shared.FileLockedInfo;
 import shared.FileServerInterface;
+import shared.exceptions.InvalidClientIdentifier;
 
 public class FileClient {
 	private final static String RMI_REGISTRY_SERVER_NAME = "FileServer";
+	private final static String NOT_LOCKED = "\tnon verrouillé";
+	private final static String LOCKED_BY_CLIENT = "\tverrouillé par client ";
+	private final static String ALREADY_LOCKED = " est déjà verrouillé par client ";
+	private final static String LOCKED = "verrouillé";
+	private final String FILES = " fichier(s)";
+	private final static String FILE_ADDED = " ajouté.";
+	private final static String ALREADY_EXISTS = " existe déjà.";
+	private final static String FILE_SENT_TO_SERVER = " a été envoyé au serveur";
+	private final static String COMMAND_REFUSED = "opération refusée:";
+	private final static String ERROR_PUSH_LOCK = " vous devez d'abord verrouiller le fichier";
+	private final static String MISSING_ARG = "Argument manquant";
+	
+	private final static String CLIENT_ID_FILENAME = ".CLIENT";
 	
 	private final FileServerInterface stub;
 	
@@ -47,20 +61,7 @@ public class FileClient {
 		
 	}
 	
-	private void executeCommand(String[] args){
-		
-		String notLocked = "\tnon verrouillé";
-		String lockedByClient = "\tverrouillé par client ";
-		String alreadyLockedByClient = " est déjà verrouillé par client ";
-		String locked = " verrouillé";
-		String files = " fichier(s)";
-		String fileAdded = " ajouté.";
-		String alredyExists = " existe déjà.";
-		String fileSentToServer = " a été envoyé au serveur";
-		String commandRefused = "opération refusée:";
-		String errorPushLock = " vous devez d'abord verrouiller le fichier";
-		String missingArg = "Argument manquant";
-
+	private void executeCommand(String[] args) {
 		String sync = " synchronisé";
 		String upToDate = " est déjà à jour";
 		
@@ -75,13 +76,13 @@ public class FileClient {
 				FileLockedInfo[] fileLockInfos = stub.list();
 				for(FileLockedInfo lockInfo : fileLockInfos){
 					if(lockInfo.getClientNumberThatLockedFile() == -1){
-						 System.out.println("* " + lockInfo.getFileName() + notLocked);
+						 System.out.println("* " + lockInfo.getFileName() + NOT_LOCKED);
 					}
 					else{
-						System.out.println("* " + lockInfo.getFileName() + lockedByClient + lockInfo.getClientNumberThatLockedFile());
+						System.out.println("* " + lockInfo.getFileName() + LOCKED_BY_CLIENT + lockInfo.getClientNumberThatLockedFile());
 					}
 				}
-				System.out.println(fileLockInfos.length + files);
+				System.out.println(fileLockInfos.length + FILES);
 	
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -96,9 +97,9 @@ public class FileClient {
 					boolean success = stub.create(file);
 					
 					if(success)
-						System.out.println(file + fileAdded);
+						System.out.println(file + FILE_ADDED);
 					else
-						System.out.println(file + alredyExists);
+						System.out.println(file + ALREADY_EXISTS);
 					
 				} catch (RemoteException e) {
 					// TODO Auto-generated catch block
@@ -109,7 +110,7 @@ public class FileClient {
 				}
 			}
 			else{
-				System.out.println(missingArg);
+				System.out.println(MISSING_ARG);
 			}
 			break;
 		case "get":
@@ -140,62 +141,57 @@ public class FileClient {
 				} 
 			}
 			else{
-				System.out.println(missingArg);
+				System.out.println(MISSING_ARG);
 			}
 			break;
 		case "push":
-			if(args.length == 2){
-				String file = args[1];
+			if(args.length == 2) {
+				boolean success = false;
 				try {
-					stub.push(file, readFile(file), getOrCreateClientId());
-					System.out.println(file + fileSentToServer);
-				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IllegalStateException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					performPush(args[1]);
+					success = true;
+				} catch(InvalidClientIdentifier e) {
+					System.err.println("L'identifiant n'est plus valide. Renouvellement de l'identifiant.");
 				}
-				
+
+				if(!success) {
+					try {
+						createClientId();
+						performPush(args[1]);
+					} catch(RemoteException e) {
+						e.printStackTrace();
+					} catch(IOException e) {
+						e.printStackTrace();
+					}
+				}
 			}
 			else{
-				System.out.println(missingArg);
+				System.out.println(MISSING_ARG);
 			}
 			break;
 		case "lock":
 			if(args.length == 2){
 				String file = args[1];
 				
-				try{				
-					
-					byte[] fileContent = stub.lock(file, getOrCreateClientId(), getChecksum(file));
-					
-				    if(fileContent != null){
-						Files.write(Paths.get(file), fileContent);				
-				    }
-				    System.out.println(file + locked);
-				    
-				} catch (IllegalStateException e){
-					System.out.println(file + alreadyLockedByClient + "NEED TO GET CLIENT");
-				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				boolean success = false;
+				try {
+					performLock(file);
+					success = true;
+				} catch(InvalidClientIdentifier e) {
+					System.err.println("L'identifiant n'est plus valide. Renouvellement de l'identifiant.");
+				}
+				
+				if(!success) {
+					try {
+						createClientId();
+						performLock(args[1]);
+					} catch(IOException e) {
+						e.printStackTrace();
+					}
 				}
 			}
-			else{
-				System.out.println(missingArg);
+			else {
+				System.out.println(MISSING_ARG);
 			}
 			break;
 		case "syncLocalDir":
@@ -217,69 +213,132 @@ public class FileClient {
 		}
 	}
 	
-	private byte[] readFile(String file){
+	/**
+	 * Read a file and return all its content in an array of bytes.
+	 * @param file The file to read.
+	 * @return The content of the file or null if the file doesn't exist.
+	 * @throws IOException Exception thrown if an error occur while reading the file.
+	 */
+	private byte[] readFile(String file) throws IOException {
 		byte[] data = null;
-		File f = new File(file + "txt");
-		try {
-			if(f.exists() && !f.isDirectory()) { 
-				data = Files.readAllBytes(Paths.get("clientId.txt"));
-				
-			}
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		File f = new File(file);
+		if(f.exists() && !f.isDirectory()) { 
+			data = Files.readAllBytes(Paths.get(file));
 		}
 		return data;
 	}
 	
-	private byte[] getOrCreateClientId(){
+	/**
+	 * Look for the file CLIENT_ID_FILENAME on the disk and get it's content if it exists. Otherwise, ask the server
+	 * for an identifier and write it to CLIENT_ID_FILENAME.
+	 * @return The identifier on the disk or generated by the server.
+	 * @throws IOException Exception thrown if an error occur while reading or writing on the disk.
+	 * @throws RemoteException Exception thrown if an error occur while communicating with the server.
+	 */
+	private byte[] getOrCreateClientId() throws IOException, RemoteException {
 		byte[] clientId = null;
-		File f = new File("clientId.txt");
 		try {
-			if(f.exists() && !f.isDirectory()) { 
-					clientId = Files.readAllBytes(Paths.get("clientId.txt"));
-				
-			}
-			else{
-				clientId = stub.generateClientId();
-				Files.write(Paths.get("clientId.txt"), clientId);
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			clientId = readFile(CLIENT_ID_FILENAME);
+		} catch(IOException e) {
+			System.out.println("Error while reading the client id from disk.");
+			throw e;
+		}
+		
+		if(clientId == null) {
+			createClientId();
 		}
 		return clientId;
 	}
 	
+	/**
+	 * Ask the server for an identifier and write it to CLIENT_ID_FILENAME.
+	 * @return The identifier returned by the server.
+	 * @throws IOException Exception thrown if an error occur while writing on the disk.
+	 * @throws RemoteException Exception thrown if an error occur while communicating with the server.
+	 */
+	private byte[] createClientId() throws IOException, RemoteException {
+		byte[] clientId = stub.generateClientId();
+		try {
+			Files.write(Paths.get(CLIENT_ID_FILENAME), clientId);
+		} catch(IOException e) {
+			System.out.println("Cannot write the client identifier to disk.");
+			throw e;
+		}
+		return clientId;
+	}
+	
+	/**
+	 * Calculate the checksum of a file.
+	 * @param file The file to calculate the checksum.
+	 * @return The checksum.
+	 */
 	private byte[] getChecksum(String file){
 		byte[] checksum = null;
-		try{
-			File f = new File(file);
-			MessageDigest md = MessageDigest.getInstance("MD5");
-			
-			if(f.exists() && !f.isDirectory()) {
-					
-				FileInputStream fileStream = new FileInputStream(f);
-		        byte[] bytesRead = new byte[(int)f.length()];
-		        fileStream.read(bytesRead);
-		        fileStream.close();
-		        md.update(bytesRead);
-			    	        	
+		try {
+			byte[] bytesRead = readFile(file);
+			if(bytesRead != null) {
+				MessageDigest md = MessageDigest.getInstance("MD5");
+				md.update(bytesRead);
 			    checksum = md.digest();
 			}
-			
-			return checksum;
-			
 		} catch (NoSuchAlgorithmException e){
 			e.printStackTrace();
-		} catch(FileNotFoundException e){
-			e.printStackTrace();
-		} catch(IOException e){
+		} catch(IOException e) {
 			e.printStackTrace();
 		}
 		
-		return null;
+		return checksum;
+	}
+	
+	/**
+	 * Perform the lock request to the server.
+	 * @param file The file to lock.
+	 * @throws InvalidClientIdentifier The identifier is no longer valid. It needs to be recreated.
+	 */
+	private void performLock(String file) throws InvalidClientIdentifier {
+		try {
+			byte[] fileContent = stub.lock(file, getOrCreateClientId(), getChecksum(file));
+		    if(fileContent != null) {
+				Files.write(Paths.get(file), fileContent);				
+		    }
+		    System.out.println(file + LOCKED);
+		}
+		catch (IllegalStateException e){
+			System.out.println(file + ALREADY_LOCKED + "NEED TO GET CLIENT");
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Perform the push request to the server.
+	 * @param file The file to replace content.
+	 * @throws InvalidClientIdentifier The identifier is no longer valid. It needs to be recreated.
+	 */
+	private void performPush(String file) throws InvalidClientIdentifier {
+		try {
+			stub.push(file, readFile(file), getOrCreateClientId());
+			System.out.println(file + FILE_SENT_TO_SERVER);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public FileClient(String hostname, String rmiRegistryServerName) throws NotBoundException, AccessException, RemoteException {
