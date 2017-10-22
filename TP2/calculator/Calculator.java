@@ -1,13 +1,10 @@
 package calculator;
 
-import java.rmi.NoSuchObjectException;
-import java.rmi.Remote;
-import java.rmi.RemoteException;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
+import java.util.Random;
 
 import shared.CalculationOperations;
 import shared.CalculatorOccupiedException;
+import shared.Operation;
 
 class Calculator implements CalculationOperations {
 
@@ -18,12 +15,29 @@ class Calculator implements CalculationOperations {
 		this.nbOperationsToAccept = nbOperationsToAccept;
 		this.maliciousPercent = maliciousPercent;
 	}
-	
-	public int pell(int number) throws CalculatorOccupiedException {
-		return 0;
+
+	@Override
+	public int[] calculate(Operation[] operations) throws CalculatorOccupiedException {
+		Random random = new Random();
+		if(operations.length > nbOperationsToAccept) {
+			float occupiedPercent = (operations.length - nbOperationsToAccept) / (5 * nbOperationsToAccept) * 100;
+			if (occupiedPercent > random.nextFloat() * 100) {
+				throw new CalculatorOccupiedException();
+			}
+		}
+		
+		int[] result = new int[operations.length];
+		for(int i = 0; i < operations.length; ++i) {
+			result[i] = operations[i].performOperation();
+			if (maliciousPercent > random.nextFloat() * 100) {
+				result[i] += random.nextInt(100) - 50;
+			}
+		}
+		return result;
 	}
-	
-	public int prime(int number) throws CalculatorOccupiedException {
-		return 0;
+
+	@Override
+	public int getNumberOfOperationsSupported() {
+		return nbOperationsToAccept;
 	}
 }

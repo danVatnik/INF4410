@@ -8,7 +8,10 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UID;
 import java.rmi.server.UnicastRemoteObject;
+
+import shared.CalculationOperations;
 
 /**
  * Un conteneur pour le calculateur qui récupère un RMIRegistry et qui s'enregistre auprès de ce registry.
@@ -20,11 +23,20 @@ import java.rmi.server.UnicastRemoteObject;
  *
  */
 public class CalculatorContainer {
+	private static final String INVALID_NB_OPERATIONS = "Le nombre d'opérations n'est pas un entier positif.";
+	private static final String INVALID_MALICIOUS_PERCENT = "Le pourcentage malicieux doit être entre 0 et 100 inclusivement.";
+	private static final int INVALID_PARAM = 1;
+	private static final int INVALID_CLEANUP = 2;
+	private static final int INVALID_ACCESS = 3;
+	private static final int INVALID_REGISTER_NAME = 4;
+	private static final int REMOTE_ERROR = 5;
+	
 	private static CalculatorContainer calculatorContainer;
 	
 	private final Calculator calculator;
 	private final Remote objectExported;
 	private Registry registry;
+	private String bindName;
 	private boolean registered;
 	
 	/**
@@ -58,7 +70,8 @@ public class CalculatorContainer {
 	 * @throws RemoteException Si la communication avec le registre échoue.
 	 */
 	public void registerToRMIRegistry() throws AccessException, AlreadyBoundException, RemoteException {
-		registry.bind("Calculator", objectExported);
+		bindName = CalculationOperations.CALCULATOR_PREFIX + new UID().toString();
+		registry.bind(bindName, objectExported);
 		registered = true;
 	}
 	
@@ -70,7 +83,7 @@ public class CalculatorContainer {
 	 */
 	public void unregisterToRMIRegistry() throws AccessException, NotBoundException, RemoteException {
 		if(registered) {
-			registry.unbind("Calculator");
+			registry.unbind(bindName);
 			registered = false;
 		}
 	}
@@ -82,13 +95,50 @@ public class CalculatorContainer {
 	 * mauvais résultat et le troisième est l'hôte où il faut s'enregistrer.
 	 */
 	public static void main(String[] args) {
+		int nbOfOperationsToAccept = 0;
+		float maliciousPercent = 0;
+		String hostName = null;
+		
+		if(args.length != 3) {
+			System.out.println("Nombre invalide de paramètres entrés.");
+			showUsage();
+			System.exit(INVALID_PARAM);
+		}
+		else {
+			try {
+				nbOfOperationsToAccept = Integer.parseInt(args[0]);
+				if(nbOfOperationsToAccept <= 0) {
+					System.out.println(INVALID_NB_OPERATIONS);
+					showUsage();
+					System.exit(INVALID_PARAM);
+				}
+			}
+			catch(NumberFormatException e) {
+				System.out.println(INVALID_NB_OPERATIONS);
+				System.exit(INVALID_PARAM);
+			}
+			
+			try {
+				maliciousPercent = Float.parseFloat(args[1]);
+				if(maliciousPercent < 0 || maliciousPercent > 100) {
+					System.out.println(INVALID_MALICIOUS_PERCENT);
+					System.exit(INVALID_PARAM);
+				}
+			}
+			catch(NumberFormatException e) {
+				System.out.println(INVALID_MALICIOUS_PERCENT);
+				System.exit(INVALID_PARAM);
+			}
+			hostName = args[2];
+		}
+		
 		try {
-			calculatorContainer = new CalculatorContainer(4, 0, "127.0.0.1");
+			calculatorContainer = new CalculatorContainer(nbOfOperationsToAccept, maliciousPercent, hostName);
 		}
 		catch (RemoteException e) {
 			System.out.println("Impossible de créer le CalculatorContainer. " + e.getMessage());
 			e.printStackTrace();
-			System.exit(2);
+			System.exit(REMOTE_ERROR);
 		}
 		
 		boolean registerNameFound = false;
@@ -101,7 +151,7 @@ public class CalculatorContainer {
 			catch(AccessException e) {
 				System.out.println("Accès refusé pour communiquer avec l'hôte. " + e.getMessage());
 				e.printStackTrace();
-				cleanupAndExit(3);
+				cleanupAndExit(INVALID_ACCESS);
 			}
 			catch(AlreadyBoundException e) {
 				System.out.println("Le nom pour l'enregistrement a déjà été choisi. Essai d'un autre nom.");
@@ -109,13 +159,13 @@ public class CalculatorContainer {
 			catch(RemoteException e) {
 				System.out.println("Impossible de communiquer avec le serveur. " + e.getMessage());
 				e.printStackTrace();
-				cleanupAndExit(4);
+				cleanupAndExit(REMOTE_ERROR);
 			}
 			++tryNumber;
 		}
 		if(!registerNameFound) {
 			System.out.println("Impossible de trouver un nom non utilisé pour l'enregistrement.");
-			cleanupAndExit(5);
+			cleanupAndExit(INVALID_REGISTER_NAME);
 		}
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
@@ -136,7 +186,7 @@ public class CalculatorContainer {
 			System.exit(exitCode);
 		}
 		else {
-			System.exit(1);
+			System.exit(INVALID_CLEANUP);
 		}
 	}
 	
@@ -165,5 +215,9 @@ public class CalculatorContainer {
 			cleanupSucceded = false;
 		}
 		return cleanupSucceded;
+	}
+	
+	private static void showUsage() {
+		System.out.println("Usage : calculatorContainer nbOperationsToAccept maliciousPercent hostname");
 	}
 }
