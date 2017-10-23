@@ -13,15 +13,38 @@ import java.rmi.registry.Registry;
 
 import shared.Operation;
 
+/**
+ * Un répartiteur qui crée un RMIRegistry et qui demande à l'utilisateur quel fichier contenant des opérations il faut calculer.
+ * Le répartiteur tente d'utiliser les différents Calculateur qui se sont enregistrés auprès du RMIRegistry pour effectuer les
+ * différentes opérations. Le répartiteur tient compte de différents facteurs pour l'assignation des opérations aux calculateurs.
+ * Chaque calculateur a un nombre maximal d'opérations après lequel le calculateur se mettra à refuser de faire le calcul.
+ * Les calculateurs peuvent se terminer abruptement sans avoir retourné un résultat.
+ * En mode non sécurisé, les calculateurs peuvent retourner des résultats erronés.
+ * @author dcourcel
+ *
+ */
 public class Repartitor {
 	
 	private final Registry registryCreated;
 	
+	/**
+	 * Crée un répartiteur et un RMIRegistry.
+	 * @throws RemoteException S'il est impossible de créer le RMIRegistry.
+	 */
 	public Repartitor() throws RemoteException {
 		registryCreated = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
 	}
 	
-	public void calculateOperations(BufferedReader operationsToDo) {
+	/**
+	 * Effectue le calcul des opérations lues dans operationsToDo. Après chaque opération, un modulo 4000 est appliqué pour éviter
+	 * un débordement d'entier.
+	 * @param operationsToDo Un buffer contenant les différentes opérations à effectuer.
+	 * @return Le résultat du calcul.
+	 * @throws IllegalStateException S'il n'y a aucun calculateur enregistré dans le RMIRegistry.
+	 * @throws AccessException Si l'accès au RMIRegistry a été refusé.
+	 * @throws RemoteException Si une erreur de communication survient avec le RMIRegistry.
+	 */
+	public int calculateOperations(BufferedReader operationsToDo) throws IllegalStateException, AccessException, RemoteException {
 		String[] calculatorList;
 		try {
 			calculatorList = registryCreated.list();
@@ -37,6 +60,7 @@ public class Repartitor {
 			System.out.println("Erreur de communication avec le RMIRegistry. " + e.getMessage());
 			System.exit(3);
 		}
+		return 0;
 	}
 	
 	private Operation[] transformInputToOperations() {
