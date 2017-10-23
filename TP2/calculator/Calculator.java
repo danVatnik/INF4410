@@ -18,6 +18,7 @@ class Calculator implements CalculationOperations {
 
 	@Override
 	public int calculate(Operation[] operations) throws CalculatorOccupiedException {
+		System.out.println("Begin calculation.");
 		Random random = new Random();
 		if(operations.length > nbOperationsToAccept) {
 			float occupiedPercent = (operations.length - nbOperationsToAccept) / (5 * nbOperationsToAccept) * 100;

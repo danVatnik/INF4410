@@ -11,9 +11,9 @@ public class Pell extends Operation {
 	}
 	
 	private int pell(int number) {
-		if (operand == 0)
+		if (number == 0)
 			return 0;
-		if (operand == 1)
+		if (number == 1)
 			return 1;
 		return 2 * pell(number - 1) + pell(number - 2);
 	}

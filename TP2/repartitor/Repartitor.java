@@ -131,7 +131,7 @@ public class Repartitor {
 							threadGotError = true;
 							operations.copyInto(thread.getOperations());
 						}else{
-							resultat += threadResultat % 4000;
+							resultat = (resultat + threadResultat) % 4000 ;
 						}
 						iter.remove();
 					}
@@ -157,7 +157,7 @@ public class Repartitor {
 		
 		String line = operationsToDo.readLine();
 		
-		if(line != null){
+		while(line != null){
 			
 			String[] args = line.split(" ");
 			
@@ -165,9 +165,9 @@ public class Repartitor {
 				try{
 					int operande = Integer.parseInt(args[1]);
 					if(operande >= 0){
-						if(args[0] == "prime"){
+						if(args[0].equals("prime")){
 							ops.push(new Prime(operande));
-						}else if(args[0] == "pell"){
+						}else if(args[0].equals("pell")){
 							ops.push(new Pell(operande));
 						}else{
 							System.out.println(INVALID_LINE);
@@ -181,9 +181,12 @@ public class Repartitor {
 			}else{
 				System.out.println(INVALID_LINE);
 			}
+			
+			line = operationsToDo.readLine();
 		}
 		return ops;
 	}
+	
 	
 	public static void main(String[] args) {
 		Repartitor repartitor = null;
@@ -214,6 +217,6 @@ public class Repartitor {
 		String line;
 		line = consoleReader.readLine();
 		BufferedReader operationsToRead = new BufferedReader(new InputStreamReader(new FileInputStream(line)));
-		repartitor.calculateOperations(operationsToRead);
+		output.print(repartitor.calculateOperations(operationsToRead));
 	}
 }
