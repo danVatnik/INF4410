@@ -7,11 +7,23 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.rmi.AccessException;
+import java.rmi.NotBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.ListIterator;
+import java.util.Random;
+import java.util.Stack;
 
+import shared.CalculationOperations;
+import shared.CalculatorOccupiedException;
 import shared.Operation;
+import shared.Pell;
+import shared.Prime;
 
 /**
  * Un répartiteur qui crée un RMIRegistry et qui demande à l'utilisateur quel fichier contenant des opérations il faut calculer.
@@ -27,6 +39,7 @@ public class Repartitor {
 	
 	private final Registry registryCreated;
 	
+	private final String INVALID_LINE = "Ligne invalide.";
 	/**
 	 * Crée un répartiteur et un RMIRegistry.
 	 * @throws RemoteException S'il est impossible de créer le RMIRegistry.
@@ -44,15 +57,33 @@ public class Repartitor {
 	 * @throws AccessException Si l'accès au RMIRegistry a été refusé.
 	 * @throws RemoteException Si une erreur de communication survient avec le RMIRegistry.
 	 */
-	public int calculateOperations(BufferedReader operationsToDo) throws IllegalStateException, AccessException, RemoteException {
-		String[] calculatorList;
-		try {
-			calculatorList = registryCreated.list();
-			for(String calculatorName : calculatorList) {
-				System.out.println(calculatorName);
+	public int calculateOperations(BufferedReader operationsToDo) throws IllegalStateException, AccessException, RemoteException, IOException {
+		ArrayList<CalculationOperations> calculatorList = new ArrayList<>();
+		int resultat = 0;
+		
+		try{
+			String[] calculatorString = registryCreated.list();
+			for(int i = 0; i < calculatorString.length; i++){
+				try {
+					Remote calculator =  registryCreated.lookup(calculatorString[i]);
+					if(calculator instanceof CalculationOperations)
+							calculatorList.add((CalculationOperations)calculator);
+					else
+						System.out.println("Calculateur invalide.");
+				}
+				catch(AccessException e) {
+					System.out.println("Impossible d'obtenir la liste des éléments enregistrés dans le RMIRegistry. Accès refusé. " + e.getMessage());
+					System.exit(2);
+				}
+				catch(RemoteException e) {
+					System.out.println("Erreur de communication avec le RMIRegistry. " + e.getMessage());
+					System.exit(3);
+				}
+				catch(NotBoundException e){
+					System.out.println("Le calculateur est inexistant. " + e.getMessage());
+				}
 			}
-		}
-		catch(AccessException e) {
+		}catch(AccessException e) {
 			System.out.println("Impossible d'obtenir la liste des éléments enregistrés dans le RMIRegistry. Accès refusé. " + e.getMessage());
 			System.exit(2);
 		}
@@ -60,11 +91,98 @@ public class Repartitor {
 			System.out.println("Erreur de communication avec le RMIRegistry. " + e.getMessage());
 			System.exit(3);
 		}
-		return 0;
+		
+		Stack<Operation> operations  = transformInputToOperations(operationsToDo);
+		LinkedList<CalculatorThread> threads = new LinkedList<>();
+		Random randomCalculator = new Random();
+		
+		while(!operations.isEmpty()){
+			
+			while(!operations.isEmpty()){
+				int numAvalilableCalculators = calculatorList.size();
+				if(numAvalilableCalculators == 0)
+					throw new IllegalStateException("Plus aucun calculateur disponible.");
+				
+				int currentCalculatorPos = randomCalculator.nextInt(numAvalilableCalculators);
+				CalculationOperations currentCalculator = calculatorList.get(currentCalculatorPos);
+				int currentCalculatorSupportedOps = currentCalculator.getNumberOfOperationsSupported();
+				
+				Operation [] currentOps = selectOperationsFromStack(operations, Math.min(currentCalculatorSupportedOps + 1, operations.size()));
+				
+				CalculatorThread calculatorThread = new CalculatorThread(currentOps, currentCalculator);
+				threads.add(calculatorThread);
+				calculatorThread.start();
+			}
+			
+			boolean threadGotError = false;
+			ListIterator<CalculatorThread> iter; 
+			while(!threads.isEmpty() && !threadGotError){
+				iter = threads.listIterator();
+				while(iter.hasNext() && !threadGotError){
+					CalculatorThread thread = iter.next();
+					
+					if(thread.getState() == Thread.State.TERMINATED){
+						if(thread.getCalculatorDead()){
+							calculatorList.remove(thread.getCalculatorCaller());
+						}
+						
+						Integer threadResultat = thread.getResults();
+						if(threadResultat == null){
+							threadGotError = true;
+							operations.copyInto(thread.getOperations());
+						}else{
+							resultat += threadResultat % 4000;
+						}
+						iter.remove();
+					}
+				}
+			}	
+		}
+		
+		return resultat;
 	}
 	
-	private Operation[] transformInputToOperations() {
-		return null;
+	private Operation[] selectOperationsFromStack(Stack<Operation> ops, int numOps){
+		Operation[] extractedOPs = new Operation[numOps];
+		
+		for(int i = 0; i < numOps; i++){
+			extractedOPs[i] = ops.pop();
+		}
+		
+		return extractedOPs;
+	}
+	
+	private Stack<Operation> transformInputToOperations(BufferedReader operationsToDo) throws IOException{
+		Stack<Operation> ops = new Stack<>();
+		
+		String line = operationsToDo.readLine();
+		
+		if(line != null){
+			
+			String[] args = line.split(" ");
+			
+			if(args.length == 2){
+				try{
+					int operande = Integer.parseInt(args[1]);
+					if(operande >= 0){
+						if(args[0] == "prime"){
+							ops.push(new Prime(operande));
+						}else if(args[0] == "pell"){
+							ops.push(new Pell(operande));
+						}else{
+							System.out.println(INVALID_LINE);
+						}
+					}else{
+						System.out.println(INVALID_LINE);
+					}
+				}catch( NumberFormatException e){
+					System.out.println(INVALID_LINE);
+				}
+			}else{
+				System.out.println(INVALID_LINE);
+			}
+		}
+		return ops;
 	}
 	
 	public static void main(String[] args) {

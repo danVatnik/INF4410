@@ -17,7 +17,7 @@ class Calculator implements CalculationOperations {
 	}
 
 	@Override
-	public int[] calculate(Operation[] operations) throws CalculatorOccupiedException {
+	public int calculate(Operation[] operations) throws CalculatorOccupiedException {
 		Random random = new Random();
 		if(operations.length > nbOperationsToAccept) {
 			float occupiedPercent = (operations.length - nbOperationsToAccept) / (5 * nbOperationsToAccept) * 100;
@@ -26,13 +26,15 @@ class Calculator implements CalculationOperations {
 			}
 		}
 		
-		int[] result = new int[operations.length];
+		int result = 0;
 		for(int i = 0; i < operations.length; ++i) {
-			result[i] = operations[i].performOperation();
-			if (maliciousPercent > random.nextFloat() * 100) {
-				result[i] += random.nextInt(100) - 50;
-			}
+			result += operations[i].performOperation() % 4000;
 		}
+		
+		if (maliciousPercent > random.nextFloat() * 100) {
+			result += random.nextInt(100) - 50;
+		}
+		
 		return result;
 	}
 
