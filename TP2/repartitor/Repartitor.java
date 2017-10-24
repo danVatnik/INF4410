@@ -13,14 +13,12 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Random;
 import java.util.Stack;
 
 import shared.CalculationOperations;
-import shared.CalculatorOccupiedException;
 import shared.Operation;
 import shared.Pell;
 import shared.Prime;
@@ -36,10 +34,14 @@ import shared.Prime;
  *
  */
 public class Repartitor {
+	private static final int REGISTRY_CREATE_FAILED = 1;
+	private static final int ACCESS_EXCEPTION_CODE = 2;
+	private static final int REMOTE_EXCEPTION_CODE = 3;
+	private static final int READ_FILE_EXCEPTION = 4;
+	private static final String INVALID_LINE = "Ligne invalide.";
 	
 	private final Registry registryCreated;
 	
-	private final String INVALID_LINE = "Ligne invalide.";
 	/**
 	 * Crée un répartiteur et un RMIRegistry.
 	 * @throws RemoteException S'il est impossible de créer le RMIRegistry.
@@ -58,50 +60,19 @@ public class Repartitor {
 	 * @throws RemoteException Si une erreur de communication survient avec le RMIRegistry.
 	 */
 	public int calculateOperations(BufferedReader operationsToDo) throws IllegalStateException, AccessException, RemoteException, IOException {
-		ArrayList<CalculationOperations> calculatorList = new ArrayList<>();
+
 		int resultat = 0;
-		
-		try{
-			String[] calculatorString = registryCreated.list();
-			for(int i = 0; i < calculatorString.length; i++){
-				try {
-					Remote calculator =  registryCreated.lookup(calculatorString[i]);
-					if(calculator instanceof CalculationOperations)
-							calculatorList.add((CalculationOperations)calculator);
-					else
-						System.out.println("Calculateur invalide.");
-				}
-				catch(AccessException e) {
-					System.out.println("Impossible d'obtenir la liste des éléments enregistrés dans le RMIRegistry. Accès refusé. " + e.getMessage());
-					System.exit(2);
-				}
-				catch(RemoteException e) {
-					System.out.println("Erreur de communication avec le RMIRegistry. " + e.getMessage());
-					System.exit(3);
-				}
-				catch(NotBoundException e){
-					System.out.println("Le calculateur est inexistant. " + e.getMessage());
-				}
-			}
-		}catch(AccessException e) {
-			System.out.println("Impossible d'obtenir la liste des éléments enregistrés dans le RMIRegistry. Accès refusé. " + e.getMessage());
-			System.exit(2);
-		}
-		catch(RemoteException e) {
-			System.out.println("Erreur de communication avec le RMIRegistry. " + e.getMessage());
-			System.exit(3);
-		}
-		
-		Stack<Operation> operations  = transformInputToOperations(operationsToDo);
-		LinkedList<CalculatorThread> threads = new LinkedList<>();
 		Random randomCalculator = new Random();
+		LinkedList<CalculatorThread> threads = new LinkedList<>();
+		Stack<Operation> operations = transformInputToOperations(operationsToDo);
+		ArrayList<CalculationOperations> calculatorList = findAvailableCalculators();
 		
 		while(!operations.isEmpty()){
-			
-			while(!operations.isEmpty()){
+			do {
 				int numAvalilableCalculators = calculatorList.size();
-				if(numAvalilableCalculators == 0)
+				if(numAvalilableCalculators == 0) {
 					throw new IllegalStateException("Plus aucun calculateur disponible.");
+				}
 				
 				int currentCalculatorPos = randomCalculator.nextInt(numAvalilableCalculators);
 				CalculationOperations currentCalculator = calculatorList.get(currentCalculatorPos);
@@ -113,6 +84,7 @@ public class Repartitor {
 				threads.add(calculatorThread);
 				calculatorThread.start();
 			}
+			while(!operations.isEmpty());
 			
 			boolean threadGotError = false;
 			ListIterator<CalculatorThread> iter; 
@@ -142,6 +114,39 @@ public class Repartitor {
 		return resultat;
 	}
 	
+	/**
+	 * Lit le RMIRegistry pour trouver les calculateurs qui seront utilisés durant le calcul des opérations.
+	 * @return Une liste des calculateurs qui sont actuellement disponibles.
+	 * @throws AccessException Si l'accès au RMIRegistry a été refusé.
+	 * @throws RemoteException Si une erreur de communication survient.
+	 */
+	private ArrayList<CalculationOperations> findAvailableCalculators() throws AccessException, RemoteException {
+		ArrayList<CalculationOperations> calculatorList = new ArrayList<>();
+		String[] calculatorString = registryCreated.list();
+		for(int i = 0; i < calculatorString.length; i++) {
+			try {
+				Remote calculator =  registryCreated.lookup(calculatorString[i]);
+				if(calculator instanceof CalculationOperations) {
+					calculatorList.add((CalculationOperations)calculator);
+				}
+				else {
+					System.out.println("Calculateur invalide.");
+				}
+			}
+			catch(NotBoundException e){
+				System.out.println("Le calculateur est inexistant. " + e.getMessage());
+			}
+		}
+		return calculatorList;
+	}
+	
+	/**
+	 * Dépile une partie des opérations de la pile et retourne un tableau contenant ces opérations.
+	 * @param ops La pile à enlever des éléments.
+	 * @param numOps Le nombre d'opérations à dépiler.
+	 * @return Un tableau d'opérations provenant de la pile.
+	 * @throws EmptyStackException Si la pile contient moins d'éléments que numOps.
+	 */
 	private Operation[] selectOperationsFromStack(Stack<Operation> ops, int numOps){
 		Operation[] extractedOPs = new Operation[numOps];
 		
@@ -152,6 +157,12 @@ public class Repartitor {
 		return extractedOPs;
 	}
 	
+	/**
+	 * Lit le buffer passé et extrait les opérations à faire.
+	 * @param operationsToDo Le buffer à partir duquel il faut lire les opérations à faire.
+	 * @return Une pile contenant les différentes opérations à faire extraires du buffer.
+	 * @throws IOException Si un erreur survient lors de la lecture du buffer.
+	 */
 	private Stack<Operation> transformInputToOperations(BufferedReader operationsToDo) throws IOException{
 		Stack<Operation> ops = new Stack<>();
 		
@@ -187,7 +198,10 @@ public class Repartitor {
 		return ops;
 	}
 	
-	
+	/**
+	 * Début d'exécution du répartiteur.
+	 * @param args Contient un argument qui est 0 si le répartiteur fonctionne en mode sécurisé, autre chose si le répartiteur fonctionne en mode non sécurisé.
+	 */
 	public static void main(String[] args) {
 		Repartitor repartitor = null;
 		try {
@@ -196,27 +210,49 @@ public class Repartitor {
 		}
 		catch(RemoteException e) {
 			System.out.println("Impossible de créer le Répartiteur. " + e.getMessage());
-			System.exit(1);
+			System.exit(REGISTRY_CREATE_FAILED);
 		}
 		
-		BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-		try {
-			askForOperationsToExecute(consoleReader, System.out, repartitor);
-		}
-		catch(FileNotFoundException e) {
-			System.out.println("Le fichier entré n'a pas été trouvé.");
-		}
-		catch(IOException e) {
-			System.out.println("Une erreur est survenue lors de la lecture d'un flux d'entrée (console ou fichier). Fin du programme. " + e.getMessage());
-			System.exit(2);
+		while(true) {
+			BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
+			try {
+				askForOperationsToExecute(consoleReader, System.out, repartitor);
+			}
+			catch(FileNotFoundException e) {
+				System.out.println("Le fichier entré n'a pas été trouvé.");
+			}
+			catch(IllegalStateException e) {
+				System.out.println(e.getMessage());
+			}
+			catch(AccessException e) {
+				System.out.println("L'accès au RMIRegistry a été refusé. " + e.getMessage());
+				System.exit(ACCESS_EXCEPTION_CODE);
+			}
+			catch(RemoteException e) {
+				System.out.println("Erreur de communication avec le RMIRegistry. " + e.getMessage());
+				System.exit(REMOTE_EXCEPTION_CODE);
+			}
+			catch(IOException e) {
+				System.out.println("Une erreur est survenue lors de la lecture d'un flux d'entrée (console ou fichier). Fin du programme. " + e.getMessage());
+				System.exit(READ_FILE_EXCEPTION);
+			}
 		}
 	}
 	
-	private static void askForOperationsToExecute(BufferedReader consoleReader, PrintStream output, Repartitor repartitor) throws FileNotFoundException, IOException {
+	/**
+	 * Demande à l'utilisateur à la console le nom du fichier à lire pour y extraire les différentes opérations et lance le calcul des opérations.
+	 * @param consoleReader Le lecteur à partir duquel l'utilisateur répondra.
+	 * @param output Le flux de sortie pour afficher du texte.
+	 * @param repartitor Le répartiteur à utiliser pour le calcul des opérations.
+	 * @throws FileNotFoundException Si le fichier entré n'a pas été trouvé.
+	 * @throws IOException Si une erreur survient lors de la lecture du fichier.
+	 * @throws IllegalStateException S'il n'y a plus suffisament de calculateurs pour effectuer les calculs.
+	 */
+	private static void askForOperationsToExecute(BufferedReader consoleReader, PrintStream output, Repartitor repartitor) throws IllegalStateException, FileNotFoundException, IOException, AccessException, RemoteException {
 		output.print("Entrez le nom du fichier contenant les opérations à exécuter : ");
 		String line;
 		line = consoleReader.readLine();
 		BufferedReader operationsToRead = new BufferedReader(new InputStreamReader(new FileInputStream(line)));
-		output.print(repartitor.calculateOperations(operationsToRead));
+		output.println(repartitor.calculateOperations(operationsToRead));
 	}
 }
