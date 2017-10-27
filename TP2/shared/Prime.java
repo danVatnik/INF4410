@@ -6,7 +6,7 @@ public class Prime extends Operation {
 		super(operand);
 	}
 	
-	public int performOperation() {
+	public int performOperation() throws CalculatorOccupiedException {
 		return prime(operand);
 	}
 	

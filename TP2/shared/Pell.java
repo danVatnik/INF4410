@@ -6,7 +6,7 @@ public class Pell extends Operation {
 		super(operand);
 	}
 	
-	public int performOperation() {
+	public int performOperation() throws CalculatorOccupiedException {
 		return pell(operand);
 	}
 	

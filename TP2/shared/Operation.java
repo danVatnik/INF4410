@@ -9,5 +9,5 @@ public abstract class Operation implements Serializable{
 		this.operand = operand;
 	}
 	
-	public abstract int performOperation();
+	public abstract int performOperation() throws CalculatorOccupiedException;
 }

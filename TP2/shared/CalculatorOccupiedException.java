@@ -1,5 +1,7 @@
 package shared;
 
-public class CalculatorOccupiedException extends RuntimeException {
+import java.rmi.RemoteException;
+
+public class CalculatorOccupiedException extends RemoteException {
 
 }
