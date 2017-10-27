@@ -21,7 +21,7 @@ class Calculator implements CalculationOperations {
 		System.out.println("Demande de calculs reçue.");
 		Random random = new Random();
 		if(operations.length > nbOperationsToAccept) {
-			float occupiedPercent = (operations.length - nbOperationsToAccept) / (5 * nbOperationsToAccept) * 100;
+			float occupiedPercent = (float)(operations.length - nbOperationsToAccept) / (5 * nbOperationsToAccept) * 100;
 			if (occupiedPercent > random.nextFloat() * 100) {
 				throw new CalculatorOccupiedException();
 			}

@@ -13,7 +13,6 @@ public class CalculatorThread extends Thread {
 	private final CalculationOperations calculatorCaller;
 	private boolean calculatorDead = false;
 	
-	
 	public CalculatorThread(Operation[] ops, CalculationOperations calculatorCaller){
 		operations = ops;
 		this.calculatorCaller = calculatorCaller;
@@ -22,12 +21,13 @@ public class CalculatorThread extends Thread {
 	public void run(){
 		try {
 			resultats = calculatorCaller.calculate(operations);
-		} catch (RemoteException e) {
-			calculatorDead = true;
-			e.printStackTrace();
-		} catch (CalculatorOccupiedException e)
-		{
-			
+		}
+		catch (RemoteException e) {
+			Throwable cause = e.getCause();
+			if(!(cause instanceof CalculatorOccupiedException)) {
+				calculatorDead = true;
+				e.printStackTrace();
+			}
 		}
 	}
 	
