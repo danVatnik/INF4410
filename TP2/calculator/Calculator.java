@@ -23,6 +23,7 @@ class Calculator implements CalculationOperations {
 		if(operations.length > nbOperationsToAccept) {
 			float occupiedPercent = (float)(operations.length - nbOperationsToAccept) / (5 * nbOperationsToAccept) * 100;
 			if (occupiedPercent > random.nextFloat() * 100) {
+				System.out.println("Demande de calculs refusée.");
 				throw new CalculatorOccupiedException();
 			}
 		}
