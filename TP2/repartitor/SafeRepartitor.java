@@ -6,11 +6,12 @@ import java.util.LinkedList;
 
 import shared.CalculationOperations;
 import shared.Operation;
+import threadNotifier.IThreadNotifier;
 
 public class SafeRepartitor extends Repartitor {
 	
 	private HashSet<CalculatorThread> threads = new HashSet<>();
-	private LinkedList<CalculatorThread> finishedThreads = new LinkedList<>();
+	private LinkedList<IThreadNotifier> finishedThreads = new LinkedList<>();
 	
 	public SafeRepartitor() throws RemoteException {
 		super();
@@ -33,7 +34,8 @@ public class SafeRepartitor extends Repartitor {
 		}
 		Operation[] currentOps = retrieveSomeOperationsFromStack(currentCalculatorSupportedOps + 1);
 		
-		CalculatorThread calculatorThread = new CalculatorThread(currentOps, currentCalculator, finishedThreads);
+		CalculatorThread calculatorThread = new CalculatorThread(currentOps, currentCalculator);
+		calculatorThread.setFinishedCollection(finishedThreads);
 		threads.add(calculatorThread);
 		calculatorThread.start();
 	}
@@ -60,7 +62,7 @@ public class SafeRepartitor extends Repartitor {
 	
 	private Integer treatFinishedThreads() throws InvalidCalculator, ResultError {
 		Integer threadResult = null;
-		CalculatorThread thread = finishedThreads.getFirst();
+		CalculatorThread thread = (CalculatorThread)finishedThreads.getFirst();
 		finishedThreads.removeFirst();
 		threads.remove(thread);
 		if(thread.getCalculatorDead()) {

@@ -1,10 +1,10 @@
 package repartitor;
 
 import java.rmi.RemoteException;
-import java.util.Collection;
 
 import shared.CalculationOperations;
 import shared.Operation;
+import threadNotifier.NotifierHandler;
 
 public class UnsafeRepartitor extends Repartitor {
 
@@ -43,10 +43,9 @@ public class UnsafeRepartitor extends Repartitor {
 			throw new InvalidCalculator(currentCalculator2);
 		}
 		Operation[] currentOps = retrieveSomeOperationsFromStack(Math.min(nbOperationsSupported1, nbOperationsSupported2) + 1);
-		Collection<CalculatorThread> finishedThreads = threadNotifier.getFinishedCollection();
 		CalculatorThread[] calculatorPair = new CalculatorThread[] {
-				new CalculatorThread(currentOps, currentCalculator1, finishedThreads),
-				new CalculatorThread(currentOps, currentCalculator2, finishedThreads)
+				new CalculatorThread(currentOps, currentCalculator1),
+				new CalculatorThread(currentOps, currentCalculator2)
 		};
 		threadNotifier.startNewThreads(calculatorPair);
 	}

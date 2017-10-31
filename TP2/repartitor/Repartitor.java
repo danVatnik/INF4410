@@ -43,7 +43,6 @@ public abstract class Repartitor {
 	private final Random randomCalculator = new Random();
 	private ArrayList<CalculationOperations> calculatorList;
 	private Stack<Operation> operations;
-	private int lastCalculatorGiven;
 	
 	/**
 	 * Crée un répartiteur et un RMIRegistry.
@@ -106,8 +105,7 @@ public abstract class Repartitor {
 	}
 	
 	protected CalculationOperations getACalculator() {
-		lastCalculatorGiven = randomCalculator.nextInt(calculatorList.size());
-		return calculatorList.get(lastCalculatorGiven);
+		return calculatorList.get(randomCalculator.nextInt(calculatorList.size()));
 	}
 	
 	/**
