@@ -33,7 +33,7 @@ class Calculator implements CalculationOperations {
 		}
 		
 		if (maliciousPercent > random.nextFloat() * 100) {
-			result += random.nextInt(100) - 50;
+			result += random.nextInt(1000) - 500;
 		}
 		
 		return result;
