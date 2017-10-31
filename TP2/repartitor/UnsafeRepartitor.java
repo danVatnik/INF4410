@@ -1,15 +1,14 @@
 package repartitor;
 
 import java.rmi.RemoteException;
-import java.util.LinkedList;
-import java.util.ListIterator;
+import java.util.Collection;
 
 import shared.CalculationOperations;
 import shared.Operation;
 
 public class UnsafeRepartitor extends Repartitor {
 
-	LinkedList<CalculatorThread[]> threadPairs = new LinkedList<>();
+	private final NotifierHandler<CalculatorThread> threadNotifier = new NotifierHandler<>();
 	
 	public UnsafeRepartitor() throws RemoteException {
 		super();
@@ -44,62 +43,46 @@ public class UnsafeRepartitor extends Repartitor {
 			throw new InvalidCalculator(currentCalculator2);
 		}
 		Operation[] currentOps = retrieveSomeOperationsFromStack(Math.min(nbOperationsSupported1, nbOperationsSupported2) + 1);
-		CalculatorThread[] calculatorPair = new CalculatorThread[2]; 
-		CalculatorThread calculatorThread = new CalculatorThread(currentOps, currentCalculator1);
-		calculatorPair[0] = calculatorThread;
-		calculatorThread.start();
-		
-		calculatorThread = new CalculatorThread(currentOps, currentCalculator2);
-		calculatorPair[1] = calculatorThread;
-		calculatorThread.start();
-		
-		threadPairs.add(calculatorPair);
+		Collection<CalculatorThread> finishedThreads = threadNotifier.getFinishedCollection();
+		CalculatorThread[] calculatorPair = new CalculatorThread[] {
+				new CalculatorThread(currentOps, currentCalculator1, finishedThreads),
+				new CalculatorThread(currentOps, currentCalculator2, finishedThreads)
+		};
+		threadNotifier.startNewThreads(calculatorPair);
 	}
 
 	@Override
 	protected boolean haveWaitingResults() {
-		return threadPairs.size() != 0;
+		return threadNotifier.haveUngetResults();
 	}
 
 	@Override
-	protected int getResult() throws InvalidCalculator, ResultError {
-		Integer threadResult = null;
-		while(threadResult == null) {
-			ListIterator<CalculatorThread[]> iter = threadPairs.listIterator();
-			while(iter.hasNext() && threadResult == null) {
-				CalculatorThread[] calculatorPair = iter.next();
-				if(calculatorPair[0].getState() == Thread.State.TERMINATED && calculatorPair[1].getState() == Thread.State.TERMINATED) {
-					iter.remove();
-					if(calculatorPair[0].getCalculatorDead()) {
-						putSomeOperationsOnStack(calculatorPair[0].getOperations());
-						throw new InvalidCalculator(calculatorPair[0].getCalculatorCaller());
-					}
-					else if(calculatorPair[1].getCalculatorDead()) {
-						putSomeOperationsOnStack(calculatorPair[1].getOperations());
-						throw new InvalidCalculator(calculatorPair[1].getCalculatorCaller());
-					}
-					
-					Integer result1 = calculatorPair[0].getResults();
-					if(result1 == null) {
-						putSomeOperationsOnStack(calculatorPair[0].getOperations());
-						throw new ResultError();
-					}
-					
-					Integer result2 = calculatorPair[1].getResults();
-					if(result2 == null) {
-						putSomeOperationsOnStack(calculatorPair[1].getOperations());
-						throw new ResultError();
-					}
-					
-					if(!result1.equals(result2)) {
-						putSomeOperationsOnStack(calculatorPair[1].getOperations());
-						throw new ResultError();
-					}
-					threadResult = result1;
-				}
+	protected int getResult() throws InvalidCalculator, ResultError, InterruptedException {
+		int result;
+		CalculatorThread[] threadsFinished = threadNotifier.getFinishedThreadsPool();
+		result = retrieveAndValidateResult(threadsFinished[0]);
+		int i = 1;
+		while(i < threadsFinished.length) {
+			if(retrieveAndValidateResult(threadsFinished[i]) != result) {
+				putSomeOperationsOnStack(threadsFinished[i].getOperations());
+				throw new ResultError();
 			}
+			++i;
 		}
-		return threadResult.intValue();
+		return result;
+	}
+	
+	private int retrieveAndValidateResult(CalculatorThread thread) throws InvalidCalculator, ResultError {
+		if(thread.getCalculatorDead()) {
+			putSomeOperationsOnStack(thread.getOperations());
+			throw new InvalidCalculator(thread.getCalculatorCaller());
+		}
+		Integer result = thread.getResults();
+		if(result == null) {
+			putSomeOperationsOnStack(thread.getOperations());
+			throw new ResultError();
+		}
+		return result.intValue();
 	}
 
 }

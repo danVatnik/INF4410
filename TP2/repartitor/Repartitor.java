@@ -87,7 +87,6 @@ public abstract class Repartitor {
 			while(!threadGotError && haveWaitingResults()) {
 				try {
 					int threadResult = getResult();
-					System.out.println(threadResult);
 					resultat = (resultat + threadResult) % 4000 ;
 				}
 				catch(ResultError e) {
@@ -96,6 +95,9 @@ public abstract class Repartitor {
 				catch(InvalidCalculator e) {
 					calculatorList.remove(e.getInvalidCalculator());
 					threadGotError = true;
+				}
+				catch(InterruptedException e) {
+					System.out.println("Interruption catched.");
 				}
 			}
 		}
@@ -161,8 +163,9 @@ public abstract class Repartitor {
 	 * @return Le résultat d'un calcul.
 	 * @throws InvalidCalculator Si un calculateur est rendu invalide et ne doit plus être utilisé.
 	 * @throws ResultError S'il n'a pas été possible de calculer un résultat cette fois-ci, mais qu'il sera possible d'en obtenir un si on recommence.
+	 * @throws Exception lancée si l'attente est interrompue par une interruption.
 	 */
-	protected abstract int getResult() throws InvalidCalculator, ResultError;
+	protected abstract int getResult() throws InvalidCalculator, ResultError, InterruptedException;
 	
 	/**
 	 * Lit le RMIRegistry pour trouver les calculateurs qui seront utilisés durant le calcul des opérations.
@@ -239,7 +242,7 @@ public abstract class Repartitor {
 	public static void main(String[] args) {
 		boolean isSecure = false;
 		if(args.length == 1) {
-			if(args[0] == "0") {
+			if(args[0].equals("0")) {
 				isSecure = true;
 			}
 			else {

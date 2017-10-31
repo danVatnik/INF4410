@@ -1,19 +1,20 @@
 package repartitor;
 
 import java.rmi.RemoteException;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.ListIterator;
 
 import shared.CalculationOperations;
 import shared.Operation;
 
 public class SafeRepartitor extends Repartitor {
 	
+	private HashSet<CalculatorThread> threads = new HashSet<>();
+	private LinkedList<CalculatorThread> finishedThreads = new LinkedList<>();
+	
 	public SafeRepartitor() throws RemoteException {
 		super();
 	}
-
-	LinkedList<CalculatorThread> threads = new LinkedList<>();
 	
 	@Override
 	protected boolean haveEnoughtCalculators(int numberOfCalculators) {
@@ -32,36 +33,46 @@ public class SafeRepartitor extends Repartitor {
 		}
 		Operation[] currentOps = retrieveSomeOperationsFromStack(currentCalculatorSupportedOps + 1);
 		
-		CalculatorThread calculatorThread = new CalculatorThread(currentOps, currentCalculator);
+		CalculatorThread calculatorThread = new CalculatorThread(currentOps, currentCalculator, finishedThreads);
 		threads.add(calculatorThread);
 		calculatorThread.start();
 	}
 	
+	@Override
 	protected boolean haveWaitingResults() {
 		return threads.size() != 0;
 	}
 	
-	protected int getResult() throws InvalidCalculator, ResultError {
+	@Override
+	protected int getResult() throws InvalidCalculator, ResultError, InterruptedException {
 		Integer threadResult = null;
-		while(threadResult == null) {
-			ListIterator<CalculatorThread> iter = threads.listIterator();
-			while(iter.hasNext() && threadResult == null) {
-				CalculatorThread thread = iter.next();
-				if(thread.getState() == Thread.State.TERMINATED) {
-					iter.remove();
-					if(thread.getCalculatorDead()){
-						putSomeOperationsOnStack(thread.getOperations());
-						throw new InvalidCalculator(thread.getCalculatorCaller());
-					}
-					
-					threadResult = thread.getResults();
-					if(threadResult == null) {
-						putSomeOperationsOnStack(thread.getOperations());
-						throw new ResultError();
-					}
-				}
+		synchronized(finishedThreads) {
+			if(finishedThreads.size() > 0) {
+				threadResult = treatFinishedThreads();
+			}
+			else {
+				finishedThreads.wait();
+				threadResult = treatFinishedThreads();
 			}
 		}
 		return threadResult.intValue();
+	}
+	
+	private Integer treatFinishedThreads() throws InvalidCalculator, ResultError {
+		Integer threadResult = null;
+		CalculatorThread thread = finishedThreads.getFirst();
+		finishedThreads.removeFirst();
+		threads.remove(thread);
+		if(thread.getCalculatorDead()) {
+			putSomeOperationsOnStack(thread.getOperations());
+			throw new InvalidCalculator(thread.getCalculatorCaller());
+		}
+
+		threadResult = thread.getResults();
+		if(threadResult == null) {
+			putSomeOperationsOnStack(thread.getOperations());
+			throw new ResultError();
+		}
+		return threadResult;
 	}
 }
