@@ -1,5 +1,6 @@
 package repartitor;
 
+import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 
 import shared.CalculationOperations;
@@ -10,7 +11,7 @@ public class UnsafeRepartitor extends Repartitor {
 
 	private final NotifierHandler<CalculatorThread> threadNotifier = new NotifierHandler<>();
 	
-	public UnsafeRepartitor() throws RemoteException {
+	public UnsafeRepartitor() throws AlreadyBoundException, RemoteException {
 		super();
 	}
 

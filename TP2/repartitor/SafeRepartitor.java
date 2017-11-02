@@ -1,5 +1,6 @@
 package repartitor;
 
+import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -13,7 +14,7 @@ public class SafeRepartitor extends Repartitor {
 	private HashSet<CalculatorThread> threads = new HashSet<>();
 	private LinkedList<IThreadNotifier> finishedThreads = new LinkedList<>();
 	
-	public SafeRepartitor() throws RemoteException {
+	public SafeRepartitor() throws AlreadyBoundException, RemoteException {
 		super();
 	}
 	

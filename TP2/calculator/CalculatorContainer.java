@@ -11,6 +11,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UID;
 import java.rmi.server.UnicastRemoteObject;
 
+import shared.RepartitorRegistering;
 import shared.CalculationOperations;
 
 /**
@@ -72,10 +73,11 @@ public class CalculatorContainer {
 	 * @throws AlreadyBoundException Si le nom pour l'enregistrement est déjà utilisé.
 	 * @throws RemoteException Si la communication avec le registre échoue.
 	 */
-	public void registerToRMIRegistry() throws AccessException, AlreadyBoundException, RemoteException {
+	public void registerToRMIRegistry() throws AccessException, NotBoundException, AlreadyBoundException, RemoteException {
 		if(!registered) {
 			bindName = CalculationOperations.CALCULATOR_PREFIX + new UID().toString();
-			registry.bind(bindName, objectExported);
+			RepartitorRegistering repartitor = (RepartitorRegistering)registry.lookup("Repartitor");
+			repartitor.bindSomething(bindName, objectExported);
 			registered = true;
 		}
 	}
@@ -125,6 +127,13 @@ public class CalculatorContainer {
 	 * mauvais résultat et le troisième est l'hôte où il faut s'enregistrer.
 	 */
 	public static void main(String[] args) throws InterruptedException {
+		/*
+		if (System.getSecurityManager() == null) {
+			System.setSecurityManager(new SecurityManager());
+		}
+		System.getSecurityManager().checkConnect("132.207.213.114", Registry.REGISTRY_PORT);
+		*/
+		
 		int nbOfOperationsToAccept = 0;
 		float maliciousPercent = 0;
 		String hostName = null;
@@ -243,6 +252,17 @@ public class CalculatorContainer {
 			try {
 				calculatorContainer.registerToRMIRegistry();
 				registerNameFound = true;
+			}
+			catch(NotBoundException e) {
+				System.out.println("Le répartiteur n'existe pas dans le RMIRegistry.");
+				if(tryNumber < numberOfTries) {
+					System.out.println("Le nom pour l'enregistrement a déjà été choisi. Essai d'un autre nom.");
+					++tryNumber;
+				}
+				else {
+					System.out.println("Impossible de trouver un nom non utilisé pour l'enregistrement.");
+					System.exit(INVALID_REGISTER_NAME);
+				}
 			}
 			catch(AlreadyBoundException e) {
 				if(tryNumber < numberOfTries) {

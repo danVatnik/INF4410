@@ -7,11 +7,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.rmi.AccessException;
+import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Stack;
@@ -20,6 +22,7 @@ import shared.CalculationOperations;
 import shared.Operation;
 import shared.Pell;
 import shared.Prime;
+import shared.RepartitorRegistering;
 
 /**
  * Un répartiteur qui crée un RMIRegistry et qui demande à l'utilisateur quel fichier contenant des opérations il faut calculer.
@@ -31,7 +34,7 @@ import shared.Prime;
  * @author dcourcel
  *
  */
-public abstract class Repartitor {
+public abstract class Repartitor implements RepartitorRegistering {
 	private static final int REGISTRY_CREATE_FAILED = 1;
 	private static final int ACCESS_EXCEPTION_CODE = 2;
 	private static final int REMOTE_EXCEPTION_CODE = 3;
@@ -49,8 +52,10 @@ public abstract class Repartitor {
 	 * @param secureMode Indique si le répartiteur peut faire confiance aux calculateurs (vrai) ou non (faux).
 	 * @throws RemoteException S'il est impossible de créer le RMIRegistry.
 	 */
-	public Repartitor() throws RemoteException {
+	public Repartitor() throws AlreadyBoundException, RemoteException {
 		registryCreated = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
+		Remote exportedObject = UnicastRemoteObject.exportObject(this, 0);
+		registryCreated.bind("Repartitor", exportedObject);
 	}
 	
 	/**
@@ -232,6 +237,10 @@ public abstract class Repartitor {
 		return ops;
 	}
 	
+	public void bindSomething(String bindName, Remote objectToBind) throws AlreadyBoundException, RemoteException {
+		registryCreated.bind(bindName, objectToBind);
+	}
+	
 	/**
 	 * Début d'exécution du répartiteur.
 	 * @param args Contient l'argument 0 si le répartiteur fonctionne en mode sécurisé ou aucun argument si le répartiteur fonctionne en mode
@@ -265,6 +274,9 @@ public abstract class Repartitor {
 				repartitor = new UnsafeRepartitor();
 			}
 			System.out.println("Répartiteur créé. Prêt pour commencer la répartition de calculs.");
+		}
+		catch(AlreadyBoundException e) {
+			System.out.println("Impossible d'ajouter le répartiteur dans le RMIRegistry. Le nom existe déjà.");
 		}
 		catch(RemoteException e) {
 			System.out.println("Impossible de créer le Répartiteur. " + e.getMessage());
