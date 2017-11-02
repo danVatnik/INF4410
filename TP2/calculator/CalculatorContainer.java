@@ -69,6 +69,7 @@ public class CalculatorContainer {
 	
 	/**
 	 * Enregistre l'objet au RMIRegistry. Le calculateur pourra être appelé à partir de l'extérieur à partir de ce moment.
+	 * Pour s'enregistrer, le calculateur envoie son objet exporté au répartiteur qui l'ajoutera au RMIRegistry.
 	 * @throws AccessException Si le registry est local et s'il bloque l'accès pour effectuer l'opération.
 	 * @throws AlreadyBoundException Si le nom pour l'enregistrement est déjà utilisé.
 	 * @throws RemoteException Si la communication avec le registre échoue.
@@ -76,7 +77,7 @@ public class CalculatorContainer {
 	public void registerToRMIRegistry() throws AccessException, NotBoundException, AlreadyBoundException, RemoteException {
 		if(!registered) {
 			bindName = CalculationOperations.CALCULATOR_PREFIX + new UID().toString();
-			RepartitorRegistering repartitor = (RepartitorRegistering)registry.lookup("Repartitor");
+			RepartitorRegistering repartitor = (RepartitorRegistering)registry.lookup(RepartitorRegistering.REPARTITOR_NAME);
 			repartitor.bindSomething(bindName, objectExported);
 			registered = true;
 		}
@@ -255,14 +256,7 @@ public class CalculatorContainer {
 			}
 			catch(NotBoundException e) {
 				System.out.println("Le répartiteur n'existe pas dans le RMIRegistry.");
-				if(tryNumber < numberOfTries) {
-					System.out.println("Le nom pour l'enregistrement a déjà été choisi. Essai d'un autre nom.");
-					++tryNumber;
-				}
-				else {
-					System.out.println("Impossible de trouver un nom non utilisé pour l'enregistrement.");
-					System.exit(INVALID_REGISTER_NAME);
-				}
+				System.exit(INVALID_REGISTER_NAME);
 			}
 			catch(AlreadyBoundException e) {
 				if(tryNumber < numberOfTries) {

@@ -55,7 +55,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 	public Repartitor() throws AlreadyBoundException, RemoteException {
 		registryCreated = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
 		Remote exportedObject = UnicastRemoteObject.exportObject(this, 0);
-		registryCreated.bind("Repartitor", exportedObject);
+		registryCreated.bind(RepartitorRegistering.REPARTITOR_NAME, exportedObject);
 	}
 	
 	/**
@@ -181,12 +181,14 @@ public abstract class Repartitor implements RepartitorRegistering {
 		String[] calculatorString = registryCreated.list();
 		for(int i = 0; i < calculatorString.length; i++) {
 			try {
-				Remote calculator =  registryCreated.lookup(calculatorString[i]);
-				if(calculator instanceof CalculationOperations) {
-					calculatorList.add((CalculationOperations)calculator);
-				}
-				else {
-					System.out.println("Calculateur invalide.");
+				if(calculatorString[i].startsWith("Calculator")) {
+					Remote calculator =  registryCreated.lookup(calculatorString[i]);
+					if(calculator instanceof CalculationOperations) {
+						calculatorList.add((CalculationOperations)calculator);
+					}
+					else {
+						System.out.println("Calculateur invalide.");
+					}
 				}
 			}
 			catch(NotBoundException e){
