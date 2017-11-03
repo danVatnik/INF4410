@@ -4,16 +4,15 @@ import java.rmi.RemoteException;
 import java.util.Collection;
 
 import shared.CalculationOperations;
-import shared.CalculatorOccupiedException;
 import shared.Operation;
 import threadNotifier.IThreadNotifier;
 
 public class CalculatorThread extends Thread implements IThreadNotifier {
 	
 	private final Operation[] operations; 
-	private Integer resultats;
+	private int resultats;
 	private final CalculationOperations calculatorCaller;
-	private boolean calculatorDead = false;
+	private Throwable exceptionReceived = null;
 	private Collection<IThreadNotifier> finishedThreads;
 	
 	public CalculatorThread(Operation[] ops, CalculationOperations calculatorCaller) {
@@ -34,10 +33,7 @@ public class CalculatorThread extends Thread implements IThreadNotifier {
 			resultats = calculatorCaller.calculate(operations);
 		}
 		catch (RemoteException e) {
-			Throwable cause = e.getCause();
-			if(!(cause instanceof CalculatorOccupiedException)) {
-				calculatorDead = true;
-			}
+			exceptionReceived = e.getCause();
 		}
 		
 		synchronized (finishedThreads) {
@@ -46,7 +42,7 @@ public class CalculatorThread extends Thread implements IThreadNotifier {
 		}
 	}
 	
-	public Integer getResults(){
+	public int getResults(){
 		return resultats;
 	}
 	
@@ -54,8 +50,8 @@ public class CalculatorThread extends Thread implements IThreadNotifier {
 		return operations;
 	}
 	
-	public boolean getCalculatorDead(){
-		return calculatorDead;
+	public Throwable getExceptionThrown(){
+		return exceptionReceived;
 	}
 	
 	public CalculationOperations getCalculatorCaller(){

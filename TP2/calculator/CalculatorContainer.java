@@ -91,7 +91,8 @@ public class CalculatorContainer {
 	 */
 	public void unregisterToRMIRegistry() throws AccessException, NotBoundException, RemoteException {
 		if(registered) {
-			registry.unbind(bindName);
+			RepartitorRegistering repartitor = (RepartitorRegistering)registry.lookup(RepartitorRegistering.REPARTITOR_NAME);
+			repartitor.unbindSomething(bindName);
 			registered = false;
 		}
 	}

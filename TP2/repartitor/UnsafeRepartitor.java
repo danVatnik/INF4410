@@ -21,14 +21,14 @@ public class UnsafeRepartitor extends Repartitor {
 	}
 
 	@Override
-	protected void launchACalculation() throws InvalidCalculator {
+	protected void launchACalculation() throws ResultError {
 		CalculationOperations currentCalculator1 = getACalculator();
 		int nbOperationsSupported1;
 		try {
 			nbOperationsSupported1 = currentCalculator1.getNumberOfOperationsSupported();
 		}
 		catch(RemoteException e) {
-			throw new InvalidCalculator(currentCalculator1);
+			throw new ResultError(currentCalculator1, e.getCause());
 		}
 		CalculationOperations currentCalculator2;
 		do
@@ -41,7 +41,7 @@ public class UnsafeRepartitor extends Repartitor {
 			nbOperationsSupported2 = currentCalculator2.getNumberOfOperationsSupported();
 		}
 		catch(RemoteException e) {
-			throw new InvalidCalculator(currentCalculator2);
+			throw new ResultError(currentCalculator2, e.getCause());
 		}
 		Operation[] currentOps = retrieveSomeOperationsFromStack(Math.min(nbOperationsSupported1, nbOperationsSupported2) + 1);
 		CalculatorThread[] calculatorPair = new CalculatorThread[] {
@@ -57,7 +57,7 @@ public class UnsafeRepartitor extends Repartitor {
 	}
 
 	@Override
-	protected int getResult() throws InvalidCalculator, ResultError, InterruptedException {
+	protected int getResult() throws ResultError, InterruptedException {
 		int result;
 		CalculatorThread[] threadsFinished = threadNotifier.getFinishedThreadsPool();
 		result = retrieveAndValidateResult(threadsFinished[0]);
@@ -65,22 +65,22 @@ public class UnsafeRepartitor extends Repartitor {
 		while(i < threadsFinished.length) {
 			if(retrieveAndValidateResult(threadsFinished[i]) != result) {
 				putSomeOperationsOnStack(threadsFinished[i].getOperations());
-				throw new ResultError();
+				throw new ResultError(threadsFinished[i].getCalculatorCaller());
 			}
 			++i;
 		}
 		return result;
 	}
-	
-	private int retrieveAndValidateResult(CalculatorThread thread) throws InvalidCalculator, ResultError {
-		if(thread.getCalculatorDead()) {
+
+	private int retrieveAndValidateResult(CalculatorThread thread) throws ResultError {
+		if(thread.getExceptionThrown() != null) {
 			putSomeOperationsOnStack(thread.getOperations());
-			throw new InvalidCalculator(thread.getCalculatorCaller());
+			throw new ResultError(thread.getCalculatorCaller(), thread.getExceptionThrown());
 		}
 		Integer result = thread.getResults();
 		if(result == null) {
 			putSomeOperationsOnStack(thread.getOperations());
-			throw new ResultError();
+			throw new ResultError(thread.getCalculatorCaller());
 		}
 		return result.intValue();
 	}

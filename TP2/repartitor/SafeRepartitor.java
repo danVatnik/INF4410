@@ -24,14 +24,14 @@ public class SafeRepartitor extends Repartitor {
 	}
 	
 	@Override
-	protected void launchACalculation() throws InvalidCalculator {
+	protected void launchACalculation() throws ResultError {
 		CalculationOperations currentCalculator = getACalculator();
 		int currentCalculatorSupportedOps;
 		try {
 			currentCalculatorSupportedOps = currentCalculator.getNumberOfOperationsSupported();
 		}
 		catch(RemoteException e) {
-			throw new InvalidCalculator(currentCalculator);
+			throw new ResultError(currentCalculator, e);
 		}
 		Operation[] currentOps = retrieveSomeOperationsFromStack(currentCalculatorSupportedOps + 1);
 		
@@ -47,7 +47,7 @@ public class SafeRepartitor extends Repartitor {
 	}
 	
 	@Override
-	protected int getResult() throws InvalidCalculator, ResultError, InterruptedException {
+	protected int getResult() throws ResultError, InterruptedException {
 		Integer threadResult = null;
 		synchronized(finishedThreads) {
 			if(finishedThreads.size() > 0) {
@@ -61,21 +61,14 @@ public class SafeRepartitor extends Repartitor {
 		return threadResult.intValue();
 	}
 	
-	private Integer treatFinishedThreads() throws InvalidCalculator, ResultError {
-		Integer threadResult = null;
+	private Integer treatFinishedThreads() throws ResultError {
 		CalculatorThread thread = (CalculatorThread)finishedThreads.getFirst();
 		finishedThreads.removeFirst();
 		threads.remove(thread);
-		if(thread.getCalculatorDead()) {
+		if(thread.getExceptionThrown() != null) {
 			putSomeOperationsOnStack(thread.getOperations());
-			throw new InvalidCalculator(thread.getCalculatorCaller());
+			throw new ResultError(thread.getCalculatorCaller(), thread.getExceptionThrown());
 		}
-
-		threadResult = thread.getResults();
-		if(threadResult == null) {
-			putSomeOperationsOnStack(thread.getOperations());
-			throw new ResultError();
-		}
-		return threadResult;
+		return thread.getResults();
 	}
 }

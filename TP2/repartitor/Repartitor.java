@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.rmi.AccessException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -19,6 +18,7 @@ import java.util.Random;
 import java.util.Stack;
 
 import shared.CalculationOperations;
+import shared.CalculatorOccupiedException;
 import shared.Operation;
 import shared.Pell;
 import shared.Prime;
@@ -44,7 +44,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 	
 	private final Registry registryCreated;
 	private final Random randomCalculator = new Random();
-	private ArrayList<CalculationOperations> calculatorList;
+	private ArrayList<Entry<CalculationOperations, String>> calculatorList;
 	private Stack<Operation> operations;
 	
 	/**
@@ -63,7 +63,8 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * un débordement d'entier.
 	 * @param operationsToDo Un buffer contenant les différentes opérations à effectuer.
 	 * @return Le résultat du calcul.
-	 * @throws IllegalStateException S'il n'y a aucun calculateur enregistré dans le RMIRegistry.
+	 * @throws IllegalStateException S'il n'y a pas assez de calculateurs enregistrés dans le RMIRegistry.
+	 * @throws IOExeption Si la lecture du buffer n'a pas réussie.
 	 * @throws AccessException Si l'accès au RMIRegistry a été refusé.
 	 * @throws RemoteException Si une erreur de communication survient avec le RMIRegistry.
 	 */
@@ -81,8 +82,9 @@ public abstract class Repartitor implements RepartitorRegistering {
 				try {
 					launchACalculation();
 				}
-				catch(InvalidCalculator e) {
-					calculatorList.remove(e.getInvalidCalculator());
+				catch(ResultError e) {
+					System.out.println("Retrait d'un calculateur. " + e.getMessage());
+					unbindACalculator(e.getInvalidCalculator());
 				}
 			}
 			while(!operations.isEmpty());
@@ -95,10 +97,10 @@ public abstract class Repartitor implements RepartitorRegistering {
 				}
 				catch(ResultError e) {
 					threadGotError = true;
-				}
-				catch(InvalidCalculator e) {
-					calculatorList.remove(e.getInvalidCalculator());
-					threadGotError = true;
+					if(!(e.getCause() instanceof CalculatorOccupiedException)) {
+						System.out.println("Retrait d'un calculateur. " + e.getMessage());
+						unbindACalculator(e.getInvalidCalculator());
+					}
 				}
 				catch(InterruptedException e) {
 					System.out.println("Interruption catched.");
@@ -109,8 +111,12 @@ public abstract class Repartitor implements RepartitorRegistering {
 		return resultat;
 	}
 	
+	/**
+	 * Récupère un calculateur de façon aléatoire dans la liste.
+	 * @return Un calculateur de la liste.
+	 */
 	protected CalculationOperations getACalculator() {
-		return calculatorList.get(randomCalculator.nextInt(calculatorList.size()));
+		return calculatorList.get(randomCalculator.nextInt(calculatorList.size())).getKey();
 	}
 	
 	/**
@@ -151,7 +157,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * retrieveSomeOperationsFromStack.
 	 * @throws RemoteException Cette méthode devrait lancer cette exception si le dernier calculateur qui a été récupéré n'est plus valide.
 	 */
-	protected abstract void launchACalculation() throws InvalidCalculator;
+	protected abstract void launchACalculation() throws ResultError;
 	
 	/**
 	 * Vérifie s'il y a des résultats qui ont été lancés avec launchACalculation, mais dont le résultat n'a pas encore été récupéré avec
@@ -168,7 +174,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * @throws ResultError S'il n'a pas été possible de calculer un résultat cette fois-ci, mais qu'il sera possible d'en obtenir un si on recommence.
 	 * @throws Exception lancée si l'attente est interrompue par une interruption.
 	 */
-	protected abstract int getResult() throws InvalidCalculator, ResultError, InterruptedException;
+	protected abstract int getResult() throws ResultError, InterruptedException;
 	
 	/**
 	 * Lit le RMIRegistry pour trouver les calculateurs qui seront utilisés durant le calcul des opérations.
@@ -176,15 +182,15 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * @throws AccessException Si l'accès au RMIRegistry a été refusé.
 	 * @throws RemoteException Si une erreur de communication survient.
 	 */
-	private ArrayList<CalculationOperations> findAvailableCalculators() throws AccessException, RemoteException {
-		ArrayList<CalculationOperations> calculatorList = new ArrayList<>();
+	private ArrayList<Entry<CalculationOperations, String>> findAvailableCalculators() throws AccessException, RemoteException {
+		ArrayList<Entry<CalculationOperations, String>> calculatorList = new ArrayList<>();
 		String[] calculatorString = registryCreated.list();
 		for(int i = 0; i < calculatorString.length; i++) {
 			try {
-				if(calculatorString[i].startsWith("Calculator")) {
+				if(calculatorString[i].startsWith(CalculationOperations.CALCULATOR_PREFIX)) {
 					Remote calculator =  registryCreated.lookup(calculatorString[i]);
 					if(calculator instanceof CalculationOperations) {
-						calculatorList.add((CalculationOperations)calculator);
+						calculatorList.add(new Entry<CalculationOperations, String>((CalculationOperations)calculator, calculatorString[i]));
 					}
 					else {
 						System.out.println("Calculateur invalide.");
@@ -239,8 +245,46 @@ public abstract class Repartitor implements RepartitorRegistering {
 		return ops;
 	}
 	
+	/**
+	 * Enlève un calculateur de la liste et du registry si possible.
+	 * @param calculator Le calculateur à enlever de la liste.
+	 */
+	private void unbindACalculator(CalculationOperations calculator) {
+		int index = calculatorList.indexOf(new Entry<CalculationOperations, String>(calculator, null));
+		if(index != -1) {
+			Entry<CalculationOperations, String> element = calculatorList.remove(index);
+			try {
+				unbindSomething(element.getValue());
+			}
+			catch(NotBoundException err) {
+				
+			}
+			catch(RemoteException err) {
+				
+			}
+		}
+	}
+	
+	@Override
 	public void bindSomething(String bindName, Remote objectToBind) throws AlreadyBoundException, RemoteException {
-		registryCreated.bind(bindName, objectToBind);
+		try {
+			registryCreated.bind(bindName, objectToBind);
+		}
+		catch(RemoteException e) {
+			System.out.println("Impossible d'ajouter l'objet au RMIRegistry. " + e.getMessage());
+			throw e;
+		}
+	}
+	
+	@Override
+	public void unbindSomething(String nameToRemove) throws NotBoundException, RemoteException {
+		try {
+			registryCreated.unbind(nameToRemove);
+		}
+		catch(RemoteException e) {
+			System.out.println("Impossible d'enlever l'objet du RMIRegistry. " + e.getMessage());
+			throw e;
+		}
 	}
 	
 	/**
@@ -288,7 +332,10 @@ public abstract class Repartitor implements RepartitorRegistering {
 		while(true) {
 			BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
 			try {
-				askForOperationsToExecute(consoleReader, System.out, repartitor);
+				System.out.print("Entrez le nom du fichier contenant les opérations à exécuter : ");
+				String line = consoleReader.readLine();
+				BufferedReader operationsToRead = new BufferedReader(new InputStreamReader(new FileInputStream(line)));
+				System.out.println(repartitor.calculateOperations(operationsToRead));
 			}
 			catch(FileNotFoundException e) {
 				System.out.println("Le fichier entré n'a pas été trouvé.");
@@ -309,21 +356,5 @@ public abstract class Repartitor implements RepartitorRegistering {
 				System.exit(READ_FILE_EXCEPTION);
 			}
 		}
-	}
-	
-	/**
-	 * Demande à l'utilisateur à la console le nom du fichier à lire pour y extraire les différentes opérations et lance le calcul des opérations.
-	 * @param consoleReader Le lecteur à partir duquel l'utilisateur répondra.
-	 * @param output Le flux de sortie pour afficher du texte.
-	 * @param repartitor Le répartiteur à utiliser pour le calcul des opérations.
-	 * @throws FileNotFoundException Si le fichier entré n'a pas été trouvé.
-	 * @throws IOException Si une erreur survient lors de la lecture du fichier.
-	 * @throws IllegalStateException S'il n'y a plus suffisament de calculateurs pour effectuer les calculs.
-	 */
-	private static void askForOperationsToExecute(BufferedReader consoleReader, PrintStream output, Repartitor repartitor) throws IllegalStateException, FileNotFoundException, IOException, AccessException, RemoteException {
-		output.print("Entrez le nom du fichier contenant les opérations à exécuter : ");
-		String line = consoleReader.readLine();
-		BufferedReader operationsToRead = new BufferedReader(new InputStreamReader(new FileInputStream(line)));
-		output.println(repartitor.calculateOperations(operationsToRead));
 	}
 }
