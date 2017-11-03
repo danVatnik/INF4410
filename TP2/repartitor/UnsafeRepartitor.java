@@ -4,7 +4,7 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 
 import shared.CalculationOperations;
-import shared.Operation;
+import shared.IOperation;
 import threadNotifier.NotifierHandler;
 
 public class UnsafeRepartitor extends Repartitor {
@@ -43,7 +43,7 @@ public class UnsafeRepartitor extends Repartitor {
 		catch(RemoteException e) {
 			throw new ResultError(currentCalculator2, e.getCause());
 		}
-		Operation[] currentOps = retrieveSomeOperationsFromStack(Math.min(nbOperationsSupported1, nbOperationsSupported2) + 1);
+		IOperation[] currentOps = retrieveSomeOperationsFromStack(Math.min(nbOperationsSupported1, nbOperationsSupported2) + 1);
 		CalculatorThread[] calculatorPair = new CalculatorThread[] {
 				new CalculatorThread(currentOps, currentCalculator1),
 				new CalculatorThread(currentOps, currentCalculator2)

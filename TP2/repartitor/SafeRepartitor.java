@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 
 import shared.CalculationOperations;
-import shared.Operation;
+import shared.IOperation;
 import threadNotifier.IThreadNotifier;
 
 public class SafeRepartitor extends Repartitor {
@@ -33,7 +33,7 @@ public class SafeRepartitor extends Repartitor {
 		catch(RemoteException e) {
 			throw new ResultError(currentCalculator, e);
 		}
-		Operation[] currentOps = retrieveSomeOperationsFromStack(currentCalculatorSupportedOps + 1);
+		IOperation[] currentOps = retrieveSomeOperationsFromStack(currentCalculatorSupportedOps + 1);
 		
 		CalculatorThread calculatorThread = new CalculatorThread(currentOps, currentCalculator);
 		calculatorThread.setFinishedCollection(finishedThreads);

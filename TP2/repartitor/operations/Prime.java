@@ -1,4 +1,6 @@
-package shared;
+package repartitor.operations;
+
+import shared.CalculatorOccupiedException;
 
 public class Prime extends Operation {
 	

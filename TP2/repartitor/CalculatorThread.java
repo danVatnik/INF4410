@@ -4,18 +4,18 @@ import java.rmi.RemoteException;
 import java.util.Collection;
 
 import shared.CalculationOperations;
-import shared.Operation;
+import shared.IOperation;
 import threadNotifier.IThreadNotifier;
 
 public class CalculatorThread extends Thread implements IThreadNotifier {
 	
-	private final Operation[] operations; 
+	private final IOperation[] operations; 
 	private int resultats;
 	private final CalculationOperations calculatorCaller;
 	private Throwable exceptionReceived = null;
 	private Collection<IThreadNotifier> finishedThreads;
 	
-	public CalculatorThread(Operation[] ops, CalculationOperations calculatorCaller) {
+	public CalculatorThread(IOperation[] ops, CalculationOperations calculatorCaller) {
 		if(ops == null || calculatorCaller == null) {
 			throw new NullPointerException("A parameter for the CalculatorThread is null.");
 		}
@@ -46,7 +46,7 @@ public class CalculatorThread extends Thread implements IThreadNotifier {
 		return resultats;
 	}
 	
-	public Operation[] getOperations(){
+	public IOperation[] getOperations(){
 		return operations;
 	}
 	

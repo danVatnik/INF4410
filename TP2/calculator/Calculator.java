@@ -4,7 +4,7 @@ import java.util.Random;
 
 import shared.CalculationOperations;
 import shared.CalculatorOccupiedException;
-import shared.Operation;
+import shared.IOperation;
 
 class Calculator implements CalculationOperations {
 
@@ -17,7 +17,7 @@ class Calculator implements CalculationOperations {
 	}
 
 	@Override
-	public int calculate(Operation[] operations) throws CalculatorOccupiedException {
+	public int calculate(IOperation[] operations) throws CalculatorOccupiedException {
 		System.out.println("Demande de calculs reçue.");
 		Random random = new Random();
 		if(operations.length > nbOperationsToAccept) {

@@ -17,11 +17,12 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.Stack;
 
+import repartitor.operations.Operation;
+import repartitor.operations.Pell;
+import repartitor.operations.Prime;
 import shared.CalculationOperations;
 import shared.CalculatorOccupiedException;
-import shared.Operation;
-import shared.Pell;
-import shared.Prime;
+import shared.IOperation;
 import shared.RepartitorRegistering;
 
 /**
@@ -45,7 +46,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 	private final Registry registryCreated;
 	private final Random randomCalculator = new Random();
 	private ArrayList<Entry<CalculationOperations, String>> calculatorList;
-	private Stack<Operation> operations;
+	private Stack<IOperation> operations;
 	
 	/**
 	 * Crée un répartiteur et un RMIRegistry.
@@ -125,8 +126,8 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * @return Un tableau d'opérations provenant de la pile de la taille du paramètre numberOfOperationsToGet ou de taille inférieure
 	 * s'il restait moins d'opérations dans la pile à extraire.
 	 */
-	protected Operation[] retrieveSomeOperationsFromStack(int numberOfOperationsToGet) {
-		Operation[] extractedOPs = new Operation[Math.min(numberOfOperationsToGet, operations.size())];
+	protected IOperation[] retrieveSomeOperationsFromStack(int numberOfOperationsToGet) {
+		IOperation[] extractedOPs = new Operation[Math.min(numberOfOperationsToGet, operations.size())];
 		
 		for(int i = 0; i < extractedOPs.length; i++){
 			extractedOPs[i] = operations.pop();
@@ -139,8 +140,8 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * Met des opérations de type Operation sur la pile pour qu'elles soient exécutées.
 	 * @param objectsToPut Les objets à mettre sur la pile.
 	 */
-	protected void putSomeOperationsOnStack(Operation[] objectsToPut) {
-		for(Operation operation : objectsToPut) {
+	protected void putSomeOperationsOnStack(IOperation[] objectsToPut) {
+		for(IOperation operation : objectsToPut) {
 			operations.push(operation);
 		}
 	}
@@ -210,8 +211,8 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * @return Une pile contenant les différentes opérations à faire extraires du buffer.
 	 * @throws IOException Si un erreur survient lors de la lecture du buffer.
 	 */
-	private Stack<Operation> transformInputToOperations(BufferedReader operationsToDo) throws IOException{
-		Stack<Operation> ops = new Stack<>();
+	private Stack<IOperation> transformInputToOperations(BufferedReader operationsToDo) throws IOException{
+		Stack<IOperation> ops = new Stack<>();
 		
 		String line = operationsToDo.readLine();
 		

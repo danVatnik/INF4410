@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project basedir="." default="build-class" name="TP2">
+    <property name="buildRoot" value="bin" />
+    <property name="calculatorPkg" value="calculator" />
+    <property name="repartitorPkg" value="repartitor" />
+    <property name="threadNotifierPkg" value="threadNotifier" />
+    <property name="sharePkg" value="shared" />
+    
+    <target name="build-class">
+        <mkdir dir="${buildRoot}" />
+        <javac srcdir="./" destdir="${buildRoot}" includeantruntime="false">
+            <exclude name="Fichiers fournis TP2 INF4410/" />
+        </javac>
+    </target>
+    
+    <target depends="build-class" name="build-jar">
+        <jar destfile="${buildRoot}/repartitor.jar" basedir="${buildRoot}" update="false">
+            <include name="${repartitorPkg}" />
+            <include name="${sharePkg}" />
+            <manifest>
+                <attribute name="Main-Class" value="repartitor.Repartitor" />
+            </manifest>
+        </jar>
+        <jar destfile="${buildRoot}/calculator.jar" basedir="${buildRoot}" update="false">
+            <include name="${calculatorPkg}" />
+            <include name="${sharePkg}" />
+            <include name="${threadNotifierPkg}" />
+            <manifest>
+                <attribute name="Main-Class" value="calculator.CalculatorContainer" />
+            </manifest>
+        </jar>
+    </target>
+    
+    <target name="clean">
+        <delete dir="${buildRoot}" />
+    </target>
+</project>
