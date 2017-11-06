@@ -17,6 +17,7 @@
         <jar destfile="${buildRoot}/repartitor.jar" basedir="${buildRoot}" update="false">
             <include name="${repartitorPkg}/*" />
             <include name="${sharePkg}/*" />
+            <include name="${threadNotifierPkg}/*" />
             <manifest>
                 <attribute name="Main-Class" value="repartitor.Repartitor" />
             </manifest>
@@ -24,7 +25,6 @@
         <jar destfile="${buildRoot}/calculator.jar" basedir="${buildRoot}" update="false">
             <include name="${calculatorPkg}/*" />
             <include name="${sharePkg}/*" />
-            <include name="${threadNotifierPkg}/*" />
             <manifest>
                 <attribute name="Main-Class" value="calculator.CalculatorContainer" />
             </manifest>
