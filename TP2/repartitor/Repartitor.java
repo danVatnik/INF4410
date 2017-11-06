@@ -98,7 +98,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 				}
 				catch(ResultError e) {
 					threadGotError = true;
-					if(!(e.getCause() instanceof CalculatorOccupiedException)) {
+					if(e.getCause() != null && !(e.getCause() instanceof CalculatorOccupiedException)) {
 						System.out.println("Retrait d'un calculateur. " + e.getMessage());
 						unbindACalculator(e.getInvalidCalculator());
 					}
@@ -269,7 +269,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 	@Override
 	public void bindSomething(String bindName, Remote objectToBind) throws AlreadyBoundException, RemoteException {
 		try {
-			registryCreated.bind(bindName, objectToBind);
+			LocateRegistry.getRegistry().bind(bindName, objectToBind);
 		}
 		catch(RemoteException e) {
 			System.out.println("Impossible d'ajouter l'objet au RMIRegistry. " + e.getMessage());
@@ -280,7 +280,7 @@ public abstract class Repartitor implements RepartitorRegistering {
 	@Override
 	public void unbindSomething(String nameToRemove) throws NotBoundException, RemoteException {
 		try {
-			registryCreated.unbind(nameToRemove);
+			LocateRegistry.getRegistry().unbind(nameToRemove);
 		}
 		catch(RemoteException e) {
 			System.out.println("Impossible d'enlever l'objet du RMIRegistry. " + e.getMessage());
@@ -294,6 +294,9 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * non sécurisé.
 	 */
 	public static void main(String[] args) {
+		if(System.getSecurityManager() == null){
+			System.setSecurityManager(new SecurityManager());
+		}
 		boolean isSecure = false;
 		if(args.length == 1) {
 			if(args[0].equals("0")) {

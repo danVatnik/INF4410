@@ -16,6 +16,7 @@
     <target depends="build-class" name="build-jar">
         <jar destfile="${buildRoot}/repartitor.jar" basedir="${buildRoot}" update="false">
             <include name="${repartitorPkg}/*" />
+            <include name="${repartitorPkg}/operations/*" />
             <include name="${sharePkg}/*" />
             <include name="${threadNotifierPkg}/*" />
             <manifest>
