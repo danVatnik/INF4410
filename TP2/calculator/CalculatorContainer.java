@@ -129,12 +129,10 @@ public class CalculatorContainer {
 	 * mauvais résultat et le troisième est l'hôte où il faut s'enregistrer.
 	 */
 	public static void main(String[] args) throws InterruptedException {
-		/*
 		if (System.getSecurityManager() == null) {
 			System.setSecurityManager(new SecurityManager());
 		}
-		System.getSecurityManager().checkConnect("132.207.213.114", Registry.REGISTRY_PORT);
-		*/
+		//System.getSecurityManager().checkConnect("132.207.213.114", Registry.REGISTRY_PORT);
 		
 		int nbOfOperationsToAccept = 0;
 		float maliciousPercent = 0;

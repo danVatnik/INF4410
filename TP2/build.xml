@@ -26,6 +26,7 @@
         <jar destfile="${buildRoot}/calculator.jar" basedir="${buildRoot}" update="false">
             <include name="${calculatorPkg}/*" />
             <include name="${sharePkg}/*" />
+            <include name="${repartitorPkg}/operations/*" />
             <manifest>
                 <attribute name="Main-Class" value="calculator.CalculatorContainer" />
             </manifest>
