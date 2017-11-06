@@ -70,7 +70,9 @@ public abstract class Repartitor implements RepartitorRegistering {
 	 * @throws RemoteException Si une erreur de communication survient avec le RMIRegistry.
 	 */
 	public int calculateOperations(BufferedReader operationsToDo) throws IllegalStateException, IOException {
-
+		
+		long debutTemps = System.currentTimeMillis();
+		
 		int resultat = 0;
 		operations = transformInputToOperations(operationsToDo);
 		calculatorList = findAvailableCalculators();
@@ -108,6 +110,8 @@ public abstract class Repartitor implements RepartitorRegistering {
 				}
 			}
 		}
+		
+		System.out.println("Temps: " + (System.currentTimeMillis() - debutTemps));
 		
 		return resultat;
 	}
