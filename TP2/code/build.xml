@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project basedir="." default="build-class" name="TP2">
-    <property name="buildRoot" value="bin" />
+<project basedir="src" default="build-class" name="TP2">
+    <property name="buildRoot" value="../bin" />
     <property name="calculatorPkg" value="calculator" />
     <property name="repartitorPkg" value="repartitor" />
     <property name="threadNotifierPkg" value="threadNotifier" />

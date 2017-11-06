@@ -1,0 +1,1 @@
+java -jar -Djava.rmi.server.hostname="$1" -Djava.security.policy="policy" bin/calculator.jar $2 $3 $4

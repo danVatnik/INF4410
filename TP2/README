@@ -1,0 +1,24 @@
+1 . Compilation
+Utiliser ant. Pour compiler juste les fichier .class, la commande ant suffit. Pour créer les fichiers .jar, utilisez : ant build-jar. Les fichiers créés sont mis dans le dossier bin/.
+
+2. Exécution des tests de performance
+Exécuter d'abord le répartiteur avec la commande suivante (Le zéro facultatif à la fin de la commande est présent, il est exécuté en mode sécurisé. Si le zéro est absent, il est exécuté en mode non sécurisé.) :
+./repartiteur (Adresse IP de la machine) [0]
+java -jar -Djava.rmi.server.codebase=file:repartitor.jar -Djava.security.policy=policy -Djava.rmi.server.hostname="(Adresse IP de la machine)" repartitor.jar [0]
+Par exemple : ./repartiteur 132.207.12.42 0
+Le répartiteur devrait attendre qu'on lui entre un nom de fichier à exécuter. Il devrait afficher le texte ci-dessous.
+-----
+Répartiteur créé. Prêt pour commencer la répartition de calculs.
+Entrez le nom du fichier contenant les opérations à exécuter : operations-1949
+-----
+
+Exécuter le calculateur avec la commande suivante :
+./calculateur (Adresse IP de la machine) (Nombre d’opérations que le calculateur peut accepter) (Pourcentage entre 0 et 100 où le calculateur retourne un mauvais résulat) (Adresse IP du répartiteur)
+Par Exemple : ./calculateur 132.207.12.38 5 50 132.207.12.42
+Le calculateur devrait afficher le texte ci-dessous.
+-----
+Calculateur prêt!
+-----
+
+Entrer le nom du fichier d'opérations à exécuter dans la console du répartiteur pour que les opérations soient exécutées par les calculateurs qui sont démarrés.
+

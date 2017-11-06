@@ -1,0 +1,1 @@
+java -jar -Djava.rmi.server.codebase=file:repartitor.jar -Djava.security.policy=policy -Djava.rmi.server.hostname="$1" bin/repartitor.jar $2
