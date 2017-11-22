@@ -16,8 +16,12 @@ parameters:
   subnet_id:
     type: string
     description: Sous-reseau dans lequel le load balancer sera situe
-    default: inf4410-net
+    default: 1bd298e8-365a-46e2-828d-264c7acf8bc7
   
+  external_network_id:
+    type: string
+    description: reseau externe
+    default: 6579eb07-88c3-4707-9c6e-ab90a78cca02
   admin_pass:
     type: string
     description: Admin password
@@ -35,7 +39,18 @@ parameters:
     default: INF4410
     constraints:
       - custom_constraint: nova.keypair
-
+  
+  private_network:
+    type: string
+    label: Private network name or ID
+    description: Network to attach instance to.
+    default: reseau-pour-tous
+  public_network:
+    type: string
+    label: Public network name or ID
+    description: Network to attach instance to.
+    default: INF4410-44-net
+  
   db_port:
     type: number
     description: Database port number
@@ -55,7 +70,9 @@ resources:
             image: { get_param: image }
             flavor: { get_param: flavor }
             admin_pass: { get_param: admin_pass }
-            networks: [{ "network": "inf4410-net" }]
+            networks: 
+              - network: { get_param: public_network }
+              - network: { get_param: private_network }
             user_data_format: RAW
             user_data:
              str_replace:
@@ -90,7 +107,11 @@ resources:
         timeout: 5000
         max_retries: 2
         type: TCP
-
+  lb_floating:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: {get_param: external_network_id}
+      port_id: {get_attr: [mypool, vip, port_id]}
 outputs:
   pool_ip_address:
     value: {get_attr: [mypool, vip, address]}
