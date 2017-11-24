@@ -5,7 +5,7 @@ description: A template to deploy a python web server
 parameters:
   key_name:
     type: string
-    description: name of an existing key pair to use for the server
+    description: Le nom d'une clée SSH qui a déjà été ajoutée précédemment.
     default: INF4410
     constraints:
       - custom_constraint: nova.keypair
@@ -26,7 +26,7 @@ parameters:
 
   admin_pass:
     type: string
-    description: Admin password
+    description: Mot de passe administrateur du serveur créé.
     hidden: true
     constraints:
       - length: { min: 6, max: 8 }
