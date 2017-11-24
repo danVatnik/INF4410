@@ -13,15 +13,26 @@ parameters:
     description: Flavor utilisee par les serveurs
     default: INF4410-mini
 
-  subnet_id:
+  network_name:
     type: string
-    description: Sous-reseau dans lequel le load balancer sera situe
-    default: 1bd298e8-365a-46e2-828d-264c7acf8bc7
+    description: Sous-reseau dans lequel le load balancer et les serveurs seront situes
+    default: inf4410-net
   
-  external_network_id:
+  neutron_subnet_name:
     type: string
-    description: reseau externe
-    default: 6579eb07-88c3-4707-9c6e-ab90a78cca02
+    description: Nom du sous-reseau de Neutron dans lequel le pool sera situé.
+    default: inf4410-subnet
+  
+  network_name_floating_ip:
+    type: string
+    description: Le nom du réseau sur lequel créer l'adresse IP flotante.
+    default: ext-net
+  
+  port_number:
+    type: number
+    description: Le numéro du port sur lequel le loadbalancer et le pool répondront.
+    default: 8000
+  
   admin_pass:
     type: string
     description: Admin password
@@ -33,24 +44,14 @@ parameters:
         description: Password must consist of characters and numbers only
       - allowed_pattern: "[A-Z]+[a-zA-Z0-9]*"
         description: Password must start with an uppercase character
+  
   key_name:
     type: string
     description: name of an existing key pair to use for the server
     default: INF4410
     constraints:
       - custom_constraint: nova.keypair
-  
-  private_network:
-    type: string
-    label: Private network name or ID
-    description: Network to attach instance to.
-    default: reseau-pour-tous
-  public_network:
-    type: string
-    label: Public network name or ID
-    description: Network to attach instance to.
-    default: INF4410-44-net
-  
+
   db_port:
     type: number
     description: Database port number
@@ -58,6 +59,7 @@ parameters:
     constraints:
       - range: { min: 4000, max: 8000 }
         description: Port number must be between 4000 and 8000
+
 resources:
   server_nodes:
       type: OS::Heat::ResourceGroup
@@ -71,8 +73,7 @@ resources:
             flavor: { get_param: flavor }
             admin_pass: { get_param: admin_pass }
             networks: 
-              - network: { get_param: public_network }
-              - network: { get_param: private_network }
+              - network: { get_param: network_name }
             user_data_format: RAW
             user_data:
              str_replace:
@@ -84,21 +85,26 @@ resources:
                  db_port: { get_param: db_port }
 
 
+  %pool_content_1:
+  %  type: OS::Neutron::PoolMember
+  %  properties:
+  %    address: 
+ 
   mypool:
       type: OS::Neutron::Pool
       properties:
         monitors: [{get_resource: monitor}]
-        subnet_id: {get_param: subnet_id}
+        subnet: {get_param: neutron_subnet_name}
         lb_method: ROUND_ROBIN
         protocol: HTTP
         vip:
-         protocol_port: 80
+          protocol_port: { get_param: port_number }
 
   loadbalancer:
       type: OS::Neutron::LoadBalancer
       properties:
         pool_id: {get_resource: mypool}
-        protocol_port: 80
+        protocol_port: { get_param: port_number }
 
   monitor:
       type: OS::Neutron::HealthMonitor
@@ -107,12 +113,24 @@ resources:
         timeout: 5000
         max_retries: 2
         type: TCP
+
   lb_floating:
     type: OS::Neutron::FloatingIP
     properties:
-      floating_network_id: {get_param: external_network_id}
+      floating_network: {get_param: network_name_floating_ip }
       port_id: {get_attr: [mypool, vip, port_id]}
+
 outputs:
   pool_ip_address:
-    value: {get_attr: [mypool, vip, address]}
-    description: The IP address of the load balancing pool
+    value: {get_attr: [mypool, vip, address, members]}
+    description: The IP address members of the load balancing pool
+
+  load_balancer_info:
+    value: {get_attr: [loadbalancer, show]}
+    description: Les informations du loadbalancer.
+
+  floating_ip:
+    value: {get_attr: [lb_floating, floating_ip_address, floating_ip_address, port_id]}
+    description: Informations sur l'adresse IP flotante créée.
+  
+  
