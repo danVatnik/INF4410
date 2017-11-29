@@ -1,0 +1,185 @@
+heat_template_version: 2014-10-16
+
+description: A template to deploy a load balanced web server
+
+parameters:
+  image:
+    type: string
+    description: Image utilisee pour les serveurs
+    default: INF4410-Ubuntu-trusty-mini
+
+  flavor:
+    type: string
+    description: Flavor utilisee par les serveurs
+    default: INF4410-mini
+
+  network_name:
+    type: string
+    description: Sous-reseau dans lequel le load balancer et les serveurs seront situes
+    default: inf4410-net
+  
+  neutron_subnet_name:
+    type: string
+    description: Nom du sous-reseau de Neutron dans lequel le pool sera situé.
+    default: inf4410-subnet
+  
+  network_name_floating_ip:
+    type: string
+    description: Le nom du réseau sur lequel créer l'adresse IP flotante.
+    default: ext-net
+  
+  port_number:
+    type: number
+    description: Le numéro du port sur lequel le loadbalancer et le pool répondront.
+    default: 8000
+  
+  admin_pass:
+    type: string
+    description: Admin password
+    hidden: true
+    constraints:
+      - length: { min: 6, max: 8 }
+        description: Password length must be between 6 and 8 characters
+      - allowed_pattern: "[a-zA-Z0-9]+"
+        description: Password must consist of characters and numbers only
+      - allowed_pattern: "[A-Z]+[a-zA-Z0-9]*"
+        description: Password must start with an uppercase character
+  
+  key_name:
+    type: string
+    description: name of an existing key pair to use for the server
+    default: INF4410
+    constraints:
+      - custom_constraint: nova.keypair
+
+  db_port:
+    type: number
+    description: Database port number
+    default: 5000
+    constraints:
+      - range: { min: 4000, max: 8000 }
+        description: Port number must be between 4000 and 8000
+
+resources:
+#  server_nodes:
+#      type: OS::Heat::ResourceGroup
+#      properties:
+#        count: 2
+#        resource_def:
+#          type: OS::Nova::Server
+#          properties:
+            #~ key_name: { get_param: key_name }
+            #~ image: { get_param: image }
+            #~ flavor: { get_param: flavor }
+            #~ admin_pass: { get_param: admin_pass }
+            #~ networks: 
+              #~ - network: { get_param: network_name }
+            #~ user_data_format: RAW
+            #~ user_data:
+             #~ str_replace:
+               #~ template: |
+                 #~ #!/bin/bash
+                 #~ wget "https://raw.githubusercontent.com/houssemmh/INF4410-TP3/master/server.py";
+                 #~ python server.py
+               #~ params:
+                 #~ db_port: { get_param: db_port }
+
+  front_node_1:
+    type: OS::Nova::Server
+    properties:
+      name: front-node-1
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      admin_pass: { get_param: admin_pass }
+      networks:
+        - network: { get_param: network_name }
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+            get "https://raw.githubusercontent.com/houssemmh/INF4410-TP3/master/server.py";
+            python server.py
+          params:
+            $shared_ip: { get_param: flavor }
+
+  front_node_2:
+    type: OS::Nova::Server
+    properties:
+      name: front-node-2
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      admin_pass: { get_param: admin_pass }
+      networks:
+        - network: { get_param: network_name }
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+            get "https://raw.githubusercontent.com/houssemmh/INF4410-TP3/master/server.py";
+            python server.py
+          params:
+            $shared_ip: { get_param: flavor }
+
+  #pool_content_1:
+  #  type: OS::Neutron::PoolMember
+  #  properties:
+  #    address: 
+ 
+  mypool:
+    type: OS::Neutron::Pool
+    properties:
+      monitors: [{get_resource: monitor}]
+      subnet: {get_param: neutron_subnet_name}
+      lb_method: ROUND_ROBIN
+      protocol: HTTP
+      vip:
+        protocol_port: { get_param: port_number }
+
+  member1:
+    type: OS::Neutron::PoolMember
+    properties:
+      pool_id: {get_resource: mypool}
+      address: {get_attr: [front_node_1, first_address]}
+      protocol_port: { get_param: port_number }
+
+  member2:
+    type: OS::Neutron::PoolMember
+    properties:
+      pool_id: {get_resource: mypool}
+      address: {get_attr: [front_node_2, first_address]}
+      protocol_port: { get_param: port_number }
+
+ # loadbalancer:
+ #     type: OS::Neutron::LoadBalancer
+ #     properties:
+ #       pool_id: {get_resource: mypool}
+ #       protocol_port: { get_param: port_number }
+
+  loadbalancer:	
+    type: OS::Neutron::LoadBalancer
+    properties:
+      pool_id: { get_resource: mypool }
+      protocol_port: { get_param: port_number }
+
+  monitor:
+    type: OS::Neutron::HealthMonitor
+    properties:
+      delay: 8000
+      timeout: 5000
+      max_retries: 2
+      type: TCP
+
+  lb_floating:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: network_name_floating_ip }
+      port_id: {get_attr: [mypool, vip, port_id]}
+
+outputs:
+
+  #~ address:
+    #~ value: {get_attr: [server_nodes, addresses, 0, inf4410-net, 0, addr]}
+    #~ description: Adresse ip du serveur 1
+  
