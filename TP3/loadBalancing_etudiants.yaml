@@ -20,7 +20,7 @@ parameters:
   
   neutron_subnet_name:
     type: string
-    description: Nom du sous-reseau de Neutron dans lequel le pool sera situé.
+    description: Nom du sous-reseau de Neutron dans lequel le pool sera situe.
     default: inf4410-subnet
   
   network_name_floating_ip:
@@ -30,7 +30,7 @@ parameters:
   
   port_number:
     type: number
-    description: Le numéro du port sur lequel le loadbalancer et le pool répondront.
+    description: Le numéro du port sur lequel le loadbalancer et le pool repondront.
     default: 8000
   
   admin_pass:
@@ -68,6 +68,7 @@ resources:
         resource_def:
           type: OS::Nova::Server
           properties:
+            name: server_%index%
             key_name: { get_param: key_name }
             image: { get_param: image }
             flavor: { get_param: flavor }
@@ -84,12 +85,6 @@ resources:
                params:
                  db_port: { get_param: db_port }
 
-
-  %pool_content_1:
-  %  type: OS::Neutron::PoolMember
-  %  properties:
-  %    address: 
- 
   mypool:
       type: OS::Neutron::Pool
       properties:
@@ -103,6 +98,7 @@ resources:
   loadbalancer:
       type: OS::Neutron::LoadBalancer
       properties:
+        members: [{get_attr: [server_nodes, resource.0]}, {get_attr: [server_nodes, resource.1]}]
         pool_id: {get_resource: mypool}
         protocol_port: { get_param: port_number }
 
@@ -118,19 +114,17 @@ resources:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network: {get_param: network_name_floating_ip }
-      port_id: {get_attr: [mypool, vip, port_id]}
+      port_id: { get_attr: [mypool, vip, port_id] }
 
 outputs:
-  pool_ip_address:
-    value: {get_attr: [mypool, vip, address, members]}
-    description: The IP address members of the load balancing pool
-
-  load_balancer_info:
-    value: {get_attr: [loadbalancer, show]}
-    description: Les informations du loadbalancer.
-
   floating_ip:
-    value: {get_attr: [lb_floating, floating_ip_address, floating_ip_address, port_id]}
-    description: Informations sur l'adresse IP flotante créée.
-  
-  
+    value: {get_attr: [lb_floating, floating_ip_address]}
+    description: Informations sur l'adresse IP flotante creee.
+    
+  floating_port_ip:
+    value: {get_attr: [lb_floating, port_id]}
+    description: Port id de la floating IP.
+    
+  servers_created:
+    value: {get_attr: [server_nodes, show]}
+    description: Informations sur les serveurs crees.
